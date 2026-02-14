@@ -1,9 +1,8 @@
 import { UserResponseDto } from '@modules/user/dtos/user.response.dto';
 import { IdResponse } from '@src/libs/api/id.response.dto';
 import { defineFeature, loadFeature } from 'jest-cucumber';
-import { DatabasePool, sql } from 'slonik';
 import { TestContext } from '@tests/test-utils/TestContext';
-import { getConnectionPool } from '../../setup/jestSetupAfterEnv';
+import { getPrisma } from '../../setup/jestSetupAfterEnv';
 import {
   CreateUserTestContext,
   givenUserProfileData,
@@ -14,16 +13,16 @@ import { ApiClient } from '@tests/test-utils/ApiClient';
 const feature = loadFeature('tests/user/delete-user/delete-user.feature');
 
 defineFeature(feature, (test) => {
-  let pool: DatabasePool;
+  let prisma: ReturnType<typeof getPrisma>;
   const apiClient = new ApiClient();
 
   beforeAll(() => {
-    pool = getConnectionPool();
+    prisma = getPrisma();
   });
 
   afterEach(async () => {
-    await pool.query(sql`TRUNCATE "users"`);
-    await pool.query(sql`TRUNCATE "wallets"`);
+    await prisma.wallet.deleteMany();
+    await prisma.user.deleteMany();
   });
 
   test('I can delete a user', ({ given, when, then, and }) => {

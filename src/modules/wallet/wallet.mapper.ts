@@ -1,7 +1,7 @@
 import { Mapper } from '@libs/ddd';
 import { Injectable } from '@nestjs/common';
 import { WalletEntity } from './domain/wallet.entity';
-import { WalletModel, walletSchema } from './database/wallet.repository';
+import { WalletModel } from './database/wallet.repository';
 
 @Injectable()
 export class WalletMapper implements Mapper<WalletEntity, WalletModel> {
@@ -14,7 +14,7 @@ export class WalletMapper implements Mapper<WalletEntity, WalletModel> {
       userId: copy.userId,
       balance: copy.balance,
     };
-    return walletSchema.parse(record);
+    return record;
   }
 
   toDomain(record: WalletModel): WalletEntity {

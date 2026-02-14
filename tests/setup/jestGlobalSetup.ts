@@ -1,9 +1,10 @@
-import { databaseConfig } from '../../src/configs/database.config';
+import '../../src/libs/utils/dotenv';
 
 module.exports = async (): Promise<void> => {
-  if (!databaseConfig.database.includes('test')) {
+  const dbName = process.env.DB_NAME || '';
+  if (!dbName.includes('test')) {
     throw new Error(
-      `Current database name is: ${databaseConfig.database}. Make sure database includes a word "test" as prefix or suffix, for example: "test_db" or "db_test" to avoid writing into a main database.`,
+      `Current database name is: "${dbName}". Make sure database includes a word "test" as prefix or suffix, for example: "test_db" or "db_test" to avoid writing into a main database.`,
     );
   }
 };

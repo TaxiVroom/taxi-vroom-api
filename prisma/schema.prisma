@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// UUID are generated application-side (domain layer: UserEntity.create())
+
+model User {
+  id         String   @id
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  email      String   @unique
+  country    String
+  postalCode String
+  street     String
+  role       String
+  wallet     Wallet?
+
+  @@map("users")
+}
+
+model Wallet {
+  id        String   @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  balance   Int      @default(0)
+  userId    String   @unique
+  /// Cascade: without this, deleting a user fails (FK constraint).
+  /// Domain events are published after the DB delete, so they can't
+  /// clean up the wallet before the user is removed.
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallets")
+}

@@ -1,10 +1,9 @@
 import { Test, TestingModuleBuilder, TestingModule } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { createPool, DatabasePool } from 'slonik';
 import * as request from 'supertest';
-import { postgresConnectionUri } from '@src/configs/database.config';
 import { ValidationPipe } from '@nestjs/common';
+import { PrismaService } from '@libs/db/prisma.service';
 
 // Setting up test server and utilities
 
@@ -34,7 +33,7 @@ export class TestServer {
 }
 
 let testServer: TestServer;
-let pool: DatabasePool;
+let prisma: PrismaService;
 
 export async function generateTestingApplication(): Promise<{
   testServer: TestServer;
@@ -54,8 +53,8 @@ export function getTestServer(): TestServer {
   return testServer;
 }
 
-export function getConnectionPool(): DatabasePool {
-  return pool;
+export function getPrisma(): PrismaService {
+  return prisma;
 }
 
 export function getHttpServer(): request.SuperTest<request.Test> {
@@ -68,11 +67,11 @@ export function getHttpServer(): request.SuperTest<request.Test> {
 // setup
 beforeAll(async (): Promise<void> => {
   ({ testServer } = await generateTestingApplication());
-  pool = await createPool(postgresConnectionUri);
+  prisma = testServer.testingModule.get(PrismaService);
 });
 
 // cleanup
 afterAll(async (): Promise<void> => {
-  await pool.end();
+  await prisma.$disconnect();
   testServer.serverApplication.close();
 });

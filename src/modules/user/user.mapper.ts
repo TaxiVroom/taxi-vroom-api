@@ -1,7 +1,8 @@
 import { Mapper } from '@libs/ddd';
-import { UserModel, userSchema } from './database/user.repository';
+import { UserModel } from './database/user.repository';
 import { Address } from './domain/value-objects/address.value-object';
 import { UserEntity } from './domain/user.entity';
+import { UserRoles } from './domain/user.types';
 import { UserResponseDto } from './dtos/user.response.dto';
 import { Injectable } from '@nestjs/common';
 
@@ -28,7 +29,7 @@ export class UserMapper
       street: copy.address.street,
       role: copy.role,
     };
-    return userSchema.parse(record);
+    return record;
   }
 
   toDomain(record: UserModel): UserEntity {
@@ -38,7 +39,7 @@ export class UserMapper
       updatedAt: new Date(record.updatedAt),
       props: {
         email: record.email,
-        role: record.role,
+        role: record.role as UserRoles,
         address: new Address({
           street: record.street,
           postalCode: record.postalCode,

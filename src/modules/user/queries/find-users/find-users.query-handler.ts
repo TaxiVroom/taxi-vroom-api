@@ -2,9 +2,8 @@ import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Ok, Result } from 'oxide.ts';
 import { PaginatedParams, PaginatedQueryBase } from '@libs/ddd/query.base';
 import { Paginated } from '@src/libs/ddd';
-import { InjectPool } from 'nestjs-slonik';
-import { DatabasePool, sql } from 'slonik';
-import { UserModel, userSchema } from '../../database/user.repository';
+import { UserModel } from '../../database/user.repository';
+import { PrismaService } from '@libs/db/prisma.service';
 
 export class FindUsersQuery extends PaginatedQueryBase {
   readonly country?: string;
@@ -23,10 +22,7 @@ export class FindUsersQuery extends PaginatedQueryBase {
 
 @QueryHandler(FindUsersQuery)
 export class FindUsersQueryHandler implements IQueryHandler {
-  constructor(
-    @InjectPool()
-    private readonly pool: DatabasePool,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * In read model we don't need to execute
@@ -37,26 +33,24 @@ export class FindUsersQueryHandler implements IQueryHandler {
   async execute(
     query: FindUsersQuery,
   ): Promise<Result<Paginated<UserModel>, Error>> {
-    /**
-     * Constructing a query with Slonik.
-     * More info: https://contra.com/p/AqZWWoUB-writing-composable-sql-using-java-script
-     */
-    const statement = sql.type(userSchema)`
-         SELECT *
-         FROM users
-         WHERE
-           ${query.country ? sql`country = ${query.country}` : true} AND
-           ${query.street ? sql`street = ${query.street}` : true} AND
-           ${query.postalCode ? sql`"postalCode" = ${query.postalCode}` : true}
-         LIMIT ${query.limit}
-         OFFSET ${query.offset}`;
+    const where: any = {};
+    if (query.country) where.country = query.country;
+    if (query.street) where.street = query.street;
+    if (query.postalCode) where.postalCode = query.postalCode;
 
-    const records = await this.pool.query(statement);
+    const [data, count] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        take: query.limit,
+        skip: query.offset,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
 
     return Ok(
       new Paginated({
-        data: records.rows,
-        count: records.rowCount,
+        data,
+        count,
         limit: query.limit,
         page: query.page,
       }),

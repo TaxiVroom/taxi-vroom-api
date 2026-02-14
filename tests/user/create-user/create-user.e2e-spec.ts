@@ -1,7 +1,6 @@
 import { defineFeature, loadFeature } from 'jest-cucumber';
-import { getConnectionPool } from '../../setup/jestSetupAfterEnv';
+import { getPrisma } from '../../setup/jestSetupAfterEnv';
 import { UserResponseDto } from '@modules/user/dtos/user.response.dto';
-import { DatabasePool, sql } from 'slonik';
 import { TestContext } from '@tests/test-utils/TestContext';
 import { IdResponse } from '@src/libs/api/id.response.dto';
 import {
@@ -20,16 +19,16 @@ const feature = loadFeature('tests/user/create-user/create-user.feature');
  */
 
 defineFeature(feature, (test) => {
-  let pool: DatabasePool;
+  let prisma: ReturnType<typeof getPrisma>;
   const apiClient = new ApiClient();
 
   beforeAll(() => {
-    pool = getConnectionPool();
+    prisma = getPrisma();
   });
 
   afterEach(async () => {
-    await pool.query(sql`TRUNCATE "users"`);
-    await pool.query(sql`TRUNCATE "wallets"`);
+    await prisma.wallet.deleteMany();
+    await prisma.user.deleteMany();
   });
 
   test('I can create a user', ({ given, when, then, and }) => {
