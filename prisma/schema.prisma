@@ -8,19 +8,39 @@ datasource db {
 }
 
 /// UUID are generated application-side (domain layer: UserEntity.create())
+enum UserRole {
+  PASSENGER
+  DRIVER
+}
 
 model User {
-  id         String   @id
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  email      String   @unique
-  country    String
-  postalCode String
-  street     String
-  role       String
-  wallet     Wallet?
+  id        String     @id
+  firstName String
+  lastName  String
+  phone     String     @unique
+  email     String     @unique
+  role      UserRole
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  wallet    Wallet?
+  passenger Passenger?
+  driver    Driver?
 
   @@map("users")
+}
+
+model Passenger {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("passengers")
+}
+
+model Driver {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("drivers")
 }
 
 model Wallet {
@@ -29,7 +49,7 @@ model Wallet {
   updatedAt DateTime @updatedAt
   balance   Int      @default(0)
   userId    String   @unique
-  /// Cascade: without this, deleting a user fails (FK constraint).
+  /// Cascade: without Cascade, deleting a user fails (FK constraint).
   /// Domain events are published after the DB delete, so they can't
   /// clean up the wallet before the user is removed.
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

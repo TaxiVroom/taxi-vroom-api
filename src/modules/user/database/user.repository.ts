@@ -11,10 +11,13 @@ export type UserModel = {
   createdAt: Date;
   updatedAt: Date;
   email: string;
-  country: string;
-  postalCode: string;
-  street: string;
+  phone: string;
+  firstName: string;
+  lastName: string;
   role: string;
+  // country: string;
+  // postalCode: string;
+  // street: string;
 };
 
 /**
@@ -35,18 +38,18 @@ export class UserRepository
     super(prisma, mapper, eventEmitter, new Logger(UserRepository.name));
   }
 
-  async updateAddress(user: UserEntity): Promise<void> {
-    const address = user.getProps().address;
-    await this.client.user.update({
-      where: { id: user.id },
-      data: {
-        street: address.street,
-        country: address.country,
-        postalCode: address.postalCode,
-      },
-    });
-    await user.publishEvents(this.logger, this.eventEmitter);
-  }
+  // async updateAddress(user: UserEntity): Promise<void> {
+  //   const address = user.getProps().address;
+  //   await this.client.user.update({
+  //     where: { id: user.id },
+  //     data: {
+  //       street: address.street,
+  //       country: address.country,
+  //       postalCode: address.postalCode,
+  //     },
+  //   });
+  //   await user.publishEvents(this.logger, this.eventEmitter);
+  // }
 
   async findOneByEmail(email: string): Promise<UserEntity> {
     const user = await this.client.user.findUniqueOrThrow({

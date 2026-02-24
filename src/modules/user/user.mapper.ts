@@ -1,6 +1,6 @@
 import { Mapper } from '@libs/ddd';
 import { UserModel } from './database/user.repository';
-import { Address } from './domain/value-objects/address.value-object';
+// import { Address } from './domain/value-objects/address.value-object';
 import { UserEntity } from './domain/user.entity';
 import { UserRoles } from './domain/user.types';
 import { UserResponseDto } from './dtos/user.response.dto';
@@ -24,10 +24,13 @@ export class UserMapper
       createdAt: copy.createdAt,
       updatedAt: copy.updatedAt,
       email: copy.email,
-      country: copy.address.country,
-      postalCode: copy.address.postalCode,
-      street: copy.address.street,
+      phone: copy.phone,
+      firstName: copy.firstName,
+      lastName: copy.lastName,
       role: copy.role,
+      // country: copy.address.country,
+      // postalCode: copy.address.postalCode,
+      // street: copy.address.street,
     };
     return record;
   }
@@ -39,12 +42,15 @@ export class UserMapper
       updatedAt: new Date(record.updatedAt),
       props: {
         email: record.email,
+        phone: record.phone,
+        firstName: record.firstName,
+        lastName: record.lastName,
         role: record.role as UserRoles,
-        address: new Address({
-          street: record.street,
-          postalCode: record.postalCode,
-          country: record.country,
-        }),
+        // address: new Address({
+        //   street: record.street,
+        //   postalCode: record.postalCode,
+        //   country: record.country,
+        // }),
       },
     });
     return entity;
@@ -54,9 +60,12 @@ export class UserMapper
     const props = entity.getProps();
     const response = new UserResponseDto(entity);
     response.email = props.email;
-    response.country = props.address.country;
-    response.postalCode = props.address.postalCode;
-    response.street = props.address.street;
+    response.phone = props.phone;
+    response.firstName = props.firstName;
+    response.lastName = props.lastName;
+    // response.country = props.address.country;
+    // response.postalCode = props.address.postalCode;
+    // response.street = props.address.street;
     return response;
   }
 

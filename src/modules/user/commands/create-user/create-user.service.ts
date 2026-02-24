@@ -1,5 +1,5 @@
 import { UserRepositoryPort } from '@modules/user/database/user.repository.port';
-import { Address } from '@modules/user/domain/value-objects/address.value-object';
+// import { Address } from '@modules/user/domain/value-objects/address.value-object';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Err, Ok, Result } from 'oxide.ts';
 import { CreateUserCommand } from './create-user.command';
@@ -22,11 +22,15 @@ export class CreateUserService implements ICommandHandler {
   ): Promise<Result<AggregateID, UserAlreadyExistsError>> {
     const user = UserEntity.create({
       email: command.email,
-      address: new Address({
-        country: command.country,
-        postalCode: command.postalCode,
-        street: command.street,
-      }),
+      phone: command.phone,
+      firstName: command.firstName,
+      lastName: command.lastName,
+      role: command.role,
+      // address: new Address({
+      //   country: command.country,
+      //   postalCode: command.postalCode,
+      //   street: command.street,
+      // }),
     });
 
     try {

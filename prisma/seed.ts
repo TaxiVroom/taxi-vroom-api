@@ -10,10 +10,14 @@ async function main() {
     data: {
       id: 'f59d0748-d455-4465-b0a8-8d8260b1c877',
       email: 'john@gmail.com',
-      country: 'England',
-      postalCode: '24312',
-      street: 'Road Avenue',
-      role: 'guest',
+      phone: '+33685456565',
+      firstName: 'John',
+      lastName: 'Doe',
+      // country: 'England',
+      // postalCode: '24312',
+      // street: 'Road Avenue',
+      role: 'PASSENGER',
+      // role: 'guest',
     },
   });
 

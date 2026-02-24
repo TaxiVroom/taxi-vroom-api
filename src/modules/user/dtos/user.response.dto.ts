@@ -9,20 +9,29 @@ export class UserResponseDto extends ResponseBase {
   email: string;
 
   @ApiProperty({
-    example: 'France',
-    description: "User's country of residence",
+    example: '+33685456565',
+    description: "User's phone number in E.164 format",
   })
-  country: string;
+  phone: string;
 
   @ApiProperty({
-    example: '123456',
-    description: 'Postal code',
+    example: 'Jean',
+    description: "User's first name",
   })
-  postalCode: string;
+  firstName: string;
 
   @ApiProperty({
-    example: 'Park Avenue',
-    description: 'Street where the user is registered',
+    example: 'Dupont',
+    description: "User's last name",
   })
-  street: string;
+  lastName: string;
+
+  // @ApiProperty({ example: 'France', description: "User's country of residence" })
+  // country: string;
+
+  // @ApiProperty({ example: '123456', description: 'Postal code' })
+  // postalCode: string;
+
+  // @ApiProperty({ example: 'Park Avenue', description: 'Street where the user is registered' })
+  // street: string;
 }
