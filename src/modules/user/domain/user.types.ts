@@ -12,6 +12,7 @@ export interface UserProps {
 
 // Properties that are needed for a user creation
 export interface CreateUserProps {
+  id: string; // When provided, used as-is (e.g. Firebase UID). Otherwise a UUID is generated.
   email: string;
   phone: string;
   firstName: string;

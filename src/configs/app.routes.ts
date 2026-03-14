@@ -6,6 +6,9 @@
 // Root
 const usersRoot = 'users';
 const walletsRoot = 'wallets';
+const registrationFlowsRoot = 'registration-flows';
+const passengersRoot = 'passengers';
+const registrationDocumentTypesRoot = 'registration-document-types';
 
 // Api Versions
 const v1 = 'v1';
@@ -19,5 +22,17 @@ export const routesV1 = {
   wallet: {
     root: walletsRoot,
     delete: `/${walletsRoot}/:id`,
+  },
+  registrationFlow: {
+    me: `${registrationFlowsRoot}/me`,
+    emailAvailability: `${registrationFlowsRoot}/me/email-availability`,
+    documents: `${registrationFlowsRoot}/me/documents`,
+    documentUrl: `${registrationFlowsRoot}/me/documents/:documentTypeId/url`,
+  },
+  registrationDocumentType: {
+    root: registrationDocumentTypesRoot,
+  },
+  passenger: {
+    root: passengersRoot,
   },
 };

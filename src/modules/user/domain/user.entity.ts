@@ -16,7 +16,7 @@ export class UserEntity extends AggregateRoot<UserProps> {
   protected readonly _id: AggregateID;
 
   static create(create: CreateUserProps): UserEntity {
-    const id = randomUUID();
+    const id = create.id;
     const props: UserProps = { ...create };
     const user = new UserEntity({ id, props });
     /* adding "UserCreated" Domain Event that will be published

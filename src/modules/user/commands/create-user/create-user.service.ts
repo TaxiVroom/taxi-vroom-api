@@ -1,3 +1,9 @@
+// Boilerplate - Disabled because CreateUserProps.id is now mandatory
+// // (the Firebase UID). Users can only be created via the event handler
+// // CreateUserWhenRegistrationCompletedDomainEventHandler, which receives the ID from
+// // RegistrationCompletedDomainEvent.
+
+/*
 import { UserRepositoryPort } from '@modules/user/database/user.repository.port';
 // import { Address } from '@modules/user/domain/value-objects/address.value-object';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
@@ -34,8 +40,8 @@ export class CreateUserService implements ICommandHandler {
     });
 
     try {
-      /* Wrapping operation in a transaction to make sure
-         that all domain events are processed atomically */
+      // Wrapping operation in a transaction to make sure
+      // that all domain events are processed atomically
       await this.userRepo.transaction(async () => this.userRepo.insert(user));
       return Ok(user.id);
     } catch (error: any) {
@@ -46,3 +52,4 @@ export class CreateUserService implements ICommandHandler {
     }
   }
 }
+*/

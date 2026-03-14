@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { CqrsModule } from '@nestjs/cqrs';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { UserModule } from '@modules/user/user.module';
@@ -10,6 +11,11 @@ import { ExceptionInterceptor } from '@libs/application/interceptors/exception.i
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { PrismaModule } from '@libs/db/prisma.module';
+import { AuthModule } from '@modules/auth/auth.module';
+import { RegistrationModule } from '@modules/registration/registration.module';
+import { PassengerModule } from '@modules/passenger/passenger.module';
+import { DriverModule } from '@modules/driver/driver.module';
+import { validateEnv } from '@config/env.validation';
 
 const interceptors = [
   {
@@ -24,6 +30,7 @@ const interceptors = [
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }), // Must be first — loads .env and validates all required variables before any other module boots.
     EventEmitterModule.forRoot(),
     RequestContextModule,
     CqrsModule,
@@ -33,8 +40,12 @@ const interceptors = [
     }),
 
     // Modules
+    AuthModule,
+    RegistrationModule,
     UserModule,
     WalletModule,
+    PassengerModule,
+    DriverModule,
     PrismaModule,
   ],
   controllers: [],
