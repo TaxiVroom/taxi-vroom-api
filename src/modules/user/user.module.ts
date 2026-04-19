@@ -6,13 +6,14 @@ import { CreateUserCliController } from './commands/create-user/create-user.cli.
 import { FindUsersHttpController } from './queries/find-users/find-users.http.controller';
 import { CreateUserMessageController } from './commands/create-user/create-user.message.controller';
 import { CreateUserGraphqlResolver } from './commands/create-user/graphql-example/create-user.graphql-resolver';
-import { CreateUserService } from './commands/create-user/create-user.service';
+// import { CreateUserService } from './commands/create-user/create-user.service';
 import { DeleteUserService } from './commands/delete-user/delete-user.service';
 import { FindUsersQueryHandler } from './queries/find-users/find-users.query-handler';
 import { UserMapper } from './user.mapper';
 import { CqrsModule } from '@nestjs/cqrs';
 import { USER_REPOSITORY } from './user.di-tokens';
 import { FindUsersGraphqlResolver } from './queries/find-users/find-users.graphql-resolver';
+import { CreateUserWhenRegistrationCompletedDomainEventHandler } from './application/event-handlers/create-user-when-registration-completed.domain-event-handler';
 
 const httpControllers = [
   CreateUserHttpController,
@@ -29,7 +30,12 @@ const graphqlResolvers: Provider[] = [
   FindUsersGraphqlResolver,
 ];
 
-const commandHandlers: Provider[] = [CreateUserService, DeleteUserService];
+const eventHandlers: Provider[] = [
+  CreateUserWhenRegistrationCompletedDomainEventHandler,
+];
+
+// const commandHandlers: Provider[] = [CreateUserService, DeleteUserService];
+const commandHandlers: Provider[] = [DeleteUserService];
 
 const queryHandlers: Provider[] = [FindUsersQueryHandler];
 
@@ -47,6 +53,7 @@ const repositories: Provider[] = [
     ...cliControllers,
     ...repositories,
     ...graphqlResolvers,
+    ...eventHandlers,
     ...commandHandlers,
     ...queryHandlers,
     ...mappers,

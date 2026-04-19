@@ -17,21 +17,28 @@ export class CreateUserCliController {
   ) {}
 
   @Command({
-    command: 'user <email> <country> <postalCode> <street>',
+    command: 'user <email> <phone> <firstName> <lastName> <role>',
+    // command: 'user <email> <country> <postalCode> <street>',
     description: 'Create a user',
   })
   async createUser(
     email: string,
-    country: string,
-    postalCode: string,
-    street: string,
+    phone: string,
+    firstName: string,
+    lastName: string,
+    // country: string,
+    // postalCode: string,
+    // street: string,
   ): Promise<void> {
     const command = new CreateUserCommand({
       email,
-      country,
-      postalCode,
-      street,
-    });
+      phone,
+      firstName,
+      lastName,
+      // country,
+      // postalCode,
+      // street,
+    } as any);
 
     const result = await this.commandBus.execute(command);
 
