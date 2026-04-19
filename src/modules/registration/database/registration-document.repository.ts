@@ -53,6 +53,12 @@ export class RegistrationDocumentRepository
     });
   }
 
+  async update(entity: RegistrationDocumentEntity): Promise<void> {
+    entity.validate();
+    const record = this.mapper.toPersistence(entity);
+    await this.model.update({ where: { id: entity.id }, data: record });
+  }
+
   async findAllByDriverRegId(
     driverRegId: string,
   ): Promise<RegistrationDocumentEntity[]> {

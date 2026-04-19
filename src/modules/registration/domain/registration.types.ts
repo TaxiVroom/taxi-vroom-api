@@ -46,6 +46,10 @@ export enum DriverRegistrationStep {
   EMAIL = 'EMAIL',
   NAME = 'NAME',
   DOCUMENTS = 'DOCUMENTS',
+  PENDING_REVIEW = 'PENDING_REVIEW',
+  // Explicit step so the mobile knows immediately it must show the correction
+  // screen, without having to guess from the document data.
+  DOCUMENTS_CORRECTION = 'DOCUMENTS_CORRECTION',
   COMPLETE = 'COMPLETE',
 }
 

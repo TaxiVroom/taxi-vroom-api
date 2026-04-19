@@ -8,7 +8,7 @@ export interface UploadedFile {
 export class SubmitRegistrationDocumentsCommand extends Command {
   readonly userId: string;
   readonly documentTypeId: string;
-  readonly frontFile: UploadedFile;
+  readonly frontFile: UploadedFile | null;
   readonly backFile: UploadedFile | null;
 
   constructor(props: CommandProps<SubmitRegistrationDocumentsCommand>) {

@@ -1,8 +1,15 @@
+export enum DocumentStatus {
+  SUBMITTED = 'SUBMITTED',
+  VALIDATED = 'VALIDATED',
+  REJECTED = 'REJECTED',
+}
+
 export interface RegistrationDocumentProps {
   driverRegId: string;
   documentTypeId: string;
   frontFilePath: string;
   backFilePath: string | null;
+  status: DocumentStatus;
 }
 
 export interface CreateRegistrationDocumentProps {

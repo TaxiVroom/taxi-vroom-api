@@ -7,6 +7,7 @@ export interface FileUploadParams {
 
 export interface StoragePort {
   uploadFile(params: FileUploadParams): Promise<void>;
+  deleteFile(storagePath: string): Promise<void>;
   generateSignedUrl(
     storagePath: string,
     expiresInSeconds: number,

@@ -25,6 +25,12 @@ export class FirebaseStorageAdapter implements StoragePort {
     );
   }
 
+  async deleteFile(storagePath: string): Promise<void> {
+    this.logger.log(`[deleteFile] Suppression — storagePath="${storagePath}"`);
+    await admin.storage().bucket().file(storagePath).delete();
+    this.logger.log(`[deleteFile] Supprimé — storagePath="${storagePath}"`);
+  }
+
   async generateSignedUrl(
     storagePath: string,
     expiresInSeconds: number,

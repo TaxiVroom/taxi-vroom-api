@@ -1,5 +1,8 @@
 import { randomUUID } from 'crypto';
-import { ArgumentInvalidException } from '@libs/exceptions';
+import {
+  ArgumentInvalidException,
+  ArgumentNotProvidedException,
+} from '@libs/exceptions';
 import {
   CreateDriverRegistrationProps,
   UpdateRegistrationBaseProps,
@@ -12,17 +15,6 @@ import { RegistrationNotCompleteError } from './registration.errors';
 import { RegistrationEntity } from './registration.entity';
 
 export class DriverRegistrationEntity extends RegistrationEntity<DriverRegistrationProps> {
-  private static readonly NEXT_STEP: Record<
-    DriverRegistrationStep,
-    DriverRegistrationStep
-  > = {
-    [DriverRegistrationStep.SOCIAL_LINK]: DriverRegistrationStep.EMAIL,
-    [DriverRegistrationStep.EMAIL]: DriverRegistrationStep.NAME,
-    [DriverRegistrationStep.NAME]: DriverRegistrationStep.DOCUMENTS,
-    [DriverRegistrationStep.DOCUMENTS]: DriverRegistrationStep.COMPLETE,
-    [DriverRegistrationStep.COMPLETE]: DriverRegistrationStep.COMPLETE,
-  };
-
   static create(
     create: CreateDriverRegistrationProps,
   ): DriverRegistrationEntity {
@@ -45,13 +37,28 @@ export class DriverRegistrationEntity extends RegistrationEntity<DriverRegistrat
     return this.props.currentStep;
   }
 
+  // Advance from the step the client declares it is completing, not from the
+  // current DB step — makes PATCH idempotent on back-navigation.
   advanceStep(data: UpdateRegistrationBaseProps): void {
-    if (data.email !== undefined) this.props.email = data.email;
-    if (data.firstName !== undefined) this.props.firstName = data.firstName;
-    if (data.lastName !== undefined) this.props.lastName = data.lastName;
-    // Advance from the step the client declares it is completing, not from the
-    // current DB step — makes PATCH idempotent on back-navigation.
-    this.props.currentStep = DriverRegistrationEntity.NEXT_STEP[data.fromStep];
+    switch (data.fromStep) {
+      case DriverRegistrationStep.SOCIAL_LINK:
+        this.linkSocialAccount();
+        break;
+      case DriverRegistrationStep.EMAIL:
+        this.saveEmail(data.email);
+        break;
+      case DriverRegistrationStep.NAME:
+        this.saveName(data.firstName, data.lastName);
+        break;
+      case DriverRegistrationStep.DOCUMENTS:
+      case DriverRegistrationStep.DOCUMENTS_CORRECTION:
+        this.submitDocuments();
+        break;
+      default:
+        throw new ArgumentInvalidException(
+          `transition non autorisée depuis ${data.fromStep}`,
+        );
+    }
   }
 
   validate(): void {
@@ -78,5 +85,34 @@ export class DriverRegistrationEntity extends RegistrationEntity<DriverRegistrat
         role: p.role,
       }),
     );
+  }
+
+  requireCorrections(): void {
+    this.props.currentStep = DriverRegistrationStep.DOCUMENTS_CORRECTION;
+  }
+
+  private linkSocialAccount(): void {
+    this.props.currentStep = DriverRegistrationStep.EMAIL;
+  }
+
+  private saveEmail(email: string | undefined): void {
+    if (!email) throw new ArgumentNotProvidedException('email requis');
+    this.props.email = email;
+    this.props.currentStep = DriverRegistrationStep.NAME;
+  }
+
+  private saveName(
+    firstName: string | undefined,
+    lastName: string | undefined,
+  ): void {
+    if (!firstName || !lastName)
+      throw new ArgumentNotProvidedException('firstName et lastName requis');
+    this.props.firstName = firstName;
+    this.props.lastName = lastName;
+    this.props.currentStep = DriverRegistrationStep.DOCUMENTS;
+  }
+
+  private submitDocuments(): void {
+    this.props.currentStep = DriverRegistrationStep.PENDING_REVIEW;
   }
 }

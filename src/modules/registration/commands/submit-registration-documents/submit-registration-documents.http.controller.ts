@@ -84,22 +84,22 @@ export class SubmitRegistrationDocumentsHttpController {
     );
     this.logger.log(
       `[submitDocuments] Fichiers reçus : ${JSON.stringify({
-        front: files.front.map((f) => ({ mimetype: f.mimetype, size: f.size })),
+        front: files.front?.map((f) => ({
+          mimetype: f.mimetype,
+          size: f.size,
+        })),
         back: files.back?.map((f) => ({ mimetype: f.mimetype, size: f.size })),
       })}`,
     );
 
-    const frontFile = files.front[0];
-    if (!frontFile) {
-      this.logger.warn(
-        '[submitDocuments] Aucun fichier "front" trouvé dans la requête — BadRequestException',
+    const frontFile = files.front?.[0] ?? null;
+    if (frontFile) {
+      this.logger.log(
+        `[submitDocuments] Fichier front OK — mimetype=${frontFile.mimetype}, taille=${frontFile.size} octets, bufferLength=${frontFile.buffer?.length}`,
       );
-      throw new BadRequestException('Front file is required');
+    } else {
+      this.logger.log('[submitDocuments] Pas de fichier front dans la requête');
     }
-
-    this.logger.log(
-      `[submitDocuments] Fichier front OK — mimetype=${frontFile.mimetype}, taille=${frontFile.size} octets, bufferLength=${frontFile.buffer?.length}`,
-    );
 
     const backFile = files?.back?.[0] ?? null;
     if (backFile) {
@@ -123,7 +123,9 @@ export class SubmitRegistrationDocumentsHttpController {
       new SubmitRegistrationDocumentsCommand({
         userId: user.id,
         documentTypeId: body.documentTypeId,
-        frontFile: { buffer: frontFile.buffer, mimeType: frontFile.mimetype },
+        frontFile: frontFile
+          ? { buffer: frontFile.buffer, mimeType: frontFile.mimetype }
+          : null,
         backFile: backFile
           ? { buffer: backFile.buffer, mimeType: backFile.mimetype }
           : null,

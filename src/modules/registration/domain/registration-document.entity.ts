@@ -3,6 +3,7 @@ import { ArgumentNotProvidedException } from '@libs/exceptions';
 import { randomUUID } from 'crypto';
 import {
   CreateRegistrationDocumentProps,
+  DocumentStatus,
   RegistrationDocumentProps,
 } from './registration-document.types';
 
@@ -16,8 +17,16 @@ export class RegistrationDocumentEntity extends AggregateRoot<RegistrationDocume
   ): RegistrationDocumentEntity {
     return new RegistrationDocumentEntity({
       id: randomUUID(),
-      props,
+      props: { ...props, status: DocumentStatus.SUBMITTED },
     });
+  }
+
+  markAsValidated(): void {
+    this.props.status = DocumentStatus.VALIDATED;
+  }
+
+  markAsRejected(): void {
+    this.props.status = DocumentStatus.REJECTED;
   }
 
   validate(): void {

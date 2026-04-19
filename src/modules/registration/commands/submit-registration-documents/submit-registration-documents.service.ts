@@ -60,46 +60,46 @@ export class SubmitRegistrationDocumentsService implements ICommandHandler {
     const documentType = await this.findDocumentType(command.documentTypeId);
     if (!documentType) return Err(new DocumentTypeNotFoundError());
 
-    const backFileIsRequired = documentType.backRequired;
-    const backFileIsProvided = !!command.backFile;
-    if (backFileIsRequired && !backFileIsProvided)
-      return Err(new DocumentBackRequiredError());
+    const previousDocument = await this.findPreviousDocument(
+      command.userId,
+      command.documentTypeId,
+    );
+
+    const backSideIsAbsent =
+      documentType.backRequired &&
+      !command.backFile &&
+      !previousDocument?.backFilePath;
+    if (backSideIsAbsent) return Err(new DocumentBackRequiredError());
 
     const documentTypeSlug = slugify(documentType.name);
 
-    const frontExtensionResult = this.resolveFileExtension(
-      command.frontFile.mimeType,
-    );
-    if (frontExtensionResult.isErr()) return frontExtensionResult;
-    const frontStoragePath = this.buildStoragePath(
-      command.userId,
+    const frontPathResult = await this.resolveStoragePath({
+      newFile: command.frontFile,
+      existingPath: previousDocument?.frontFilePath ?? null,
+      userId: command.userId,
       documentTypeSlug,
-      'front',
-      frontExtensionResult.unwrap(),
-    );
-    await this.uploadDocumentSide(command.frontFile, frontStoragePath);
+      side: 'front',
+    });
+    if (frontPathResult.isErr()) return frontPathResult;
 
-    let backStoragePath: string | null = null;
-    if (command.backFile) {
-      const backExtensionResult = this.resolveFileExtension(
-        command.backFile.mimeType,
-      );
-      if (backExtensionResult.isErr()) return backExtensionResult;
-      backStoragePath = this.buildStoragePath(
-        command.userId,
-        documentTypeSlug,
-        'back',
-        backExtensionResult.unwrap(),
-      );
-      await this.uploadDocumentSide(command.backFile, backStoragePath);
-    }
+    const backPathResult = await this.resolveStoragePath({
+      newFile: command.backFile ?? null,
+      existingPath: previousDocument?.backFilePath ?? null,
+      userId: command.userId,
+      documentTypeSlug,
+      side: 'back',
+    });
+    if (backPathResult.isErr()) return backPathResult;
 
     const document = RegistrationDocumentEntity.create({
       driverRegId: command.userId,
       documentTypeId: command.documentTypeId,
-      frontFilePath: frontStoragePath,
-      backFilePath: backStoragePath,
+      frontFilePath: frontPathResult.unwrap()!,
+      backFilePath: backPathResult.unwrap(),
     });
+
+    // Simulated upload error — remove when done testing
+    //throw new Error('Simulated upload error');
 
     await this.registrationDocumentRepo.upsert(document);
     return Ok(undefined);
@@ -125,6 +125,42 @@ export class SubmitRegistrationDocumentsService implements ICommandHandler {
     return option.isSome() ? option.unwrap() : null;
   }
 
+  private async findPreviousDocument(
+    userId: string,
+    documentTypeId: string,
+  ): Promise<{ frontFilePath: string; backFilePath: string | null } | null> {
+    const option =
+      await this.registrationDocumentRepo.findOneByDriverRegIdAndDocumentTypeId(
+        userId,
+        documentTypeId,
+      );
+    if (option.isNone()) return null;
+    const { frontFilePath, backFilePath } = option.unwrap().getProps();
+    return { frontFilePath, backFilePath };
+  }
+
+  // Uploads the new file if provided, otherwise keeps the existing path as-is.
+  private async resolveStoragePath(params: {
+    newFile: FileInput | null;
+    existingPath: string | null;
+    userId: string;
+    documentTypeSlug: string;
+    side: 'front' | 'back';
+  }): Promise<Result<string | null, UnsupportedFileTypeError>> {
+    const { newFile, existingPath, userId, documentTypeSlug, side } = params;
+
+    if (!newFile) return Ok(existingPath);
+
+    const extensionResult = this.resolveFileExtension(newFile.mimeType);
+    if (extensionResult.isErr()) return extensionResult;
+
+    // The mobile always sends JPEG (ImageCropper converts everything to JPEG),
+    // so the path is always the same → Firebase silently overwrites the old file.
+    const storagePath = `drivers/${userId}/${documentTypeSlug}/${side}.${extensionResult.unwrap()}`;
+    await this.uploadFile(newFile, storagePath);
+    return Ok(storagePath);
+  }
+
   private resolveFileExtension(
     mimeType: string,
   ): Result<string, UnsupportedFileTypeError> {
@@ -138,29 +174,18 @@ export class SubmitRegistrationDocumentsService implements ICommandHandler {
     return Ok(extension);
   }
 
-  private buildStoragePath(
-    userId: string,
-    documentTypeSlug: string,
-    side: 'front' | 'back',
-    extension: string,
-  ): string {
-    return `drivers/${userId}/${documentTypeSlug}/${side}.${extension}`;
-  }
-
-  private async uploadDocumentSide(
+  private async uploadFile(
     file: FileInput,
     storagePath: string,
   ): Promise<void> {
     this.logger.log(
-      `[uploadDocumentSide] storagePath="${storagePath}", mimeType=${file.mimeType}, bufferLength=${file.buffer?.length}`,
+      `[uploadFile] storagePath="${storagePath}", mimeType=${file.mimeType}, bufferLength=${file.buffer?.length}`,
     );
     await this.storage.uploadFile({
       buffer: file.buffer,
       mimeType: file.mimeType,
       storagePath,
     });
-    this.logger.log(
-      `[uploadDocumentSide] upload terminé — storagePath="${storagePath}"`,
-    );
+    this.logger.log(`[uploadFile] terminé — storagePath="${storagePath}"`);
   }
 }

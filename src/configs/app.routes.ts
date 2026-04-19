@@ -9,6 +9,7 @@ const walletsRoot = 'wallets';
 const registrationFlowsRoot = 'registration-flows';
 const passengersRoot = 'passengers';
 const registrationDocumentTypesRoot = 'registration-document-types';
+const adminRoot = 'admin';
 
 // Api Versions
 const v1 = 'v1';
@@ -34,5 +35,8 @@ export const routesV1 = {
   },
   passenger: {
     root: passengersRoot,
+  },
+  admin: {
+    validateRegistrationDocument: `${adminRoot}/registration-documents/:documentId/validate`,
   },
 };

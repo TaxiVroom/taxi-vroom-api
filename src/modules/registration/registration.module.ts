@@ -19,12 +19,15 @@ import { CompleteRegistrationHttpController } from './commands/complete-registra
 import { CompleteRegistrationService } from './commands/complete-registration/complete-registration.service';
 import { SubmitRegistrationDocumentsHttpController } from './commands/submit-registration-documents/submit-registration-documents.http.controller';
 import { SubmitRegistrationDocumentsService } from './commands/submit-registration-documents/submit-registration-documents.service';
+import { ValidateRegistrationDocumentService } from './commands/validate-registration-document/validate-registration-document.service';
 import { CheckEmailAvailabilityHttpController } from './queries/check-email-availability/check-email-availability.http.controller';
 import { CheckEmailAvailabilityQueryHandler } from './queries/check-email-availability/check-email-availability.query-handler';
 import { GetDocumentTypesHttpController } from './queries/get-document-types/get-document-types.http.controller';
 import { GetDocumentTypesQueryHandler } from './queries/get-document-types/get-document-types.query-handler';
 import { GetRegistrationDocumentUrlHttpController } from './queries/get-registration-document-url/get-registration-document-url.http.controller';
 import { GetRegistrationDocumentUrlQueryHandler } from './queries/get-registration-document-url/get-registration-document-url.query-handler';
+import { GetDriverDocumentsHttpController } from './queries/get-driver-documents/get-driver-documents.http.controller';
+import { GetDriverDocumentsQueryHandler } from './queries/get-driver-documents/get-driver-documents.query-handler';
 
 const httpControllers = [
   GetOrCreateRegistrationHttpController,
@@ -34,6 +37,7 @@ const httpControllers = [
   CheckEmailAvailabilityHttpController,
   GetDocumentTypesHttpController,
   GetRegistrationDocumentUrlHttpController,
+  GetDriverDocumentsHttpController,
 ];
 
 const commandHandlers: Provider[] = [
@@ -41,12 +45,14 @@ const commandHandlers: Provider[] = [
   UpdateRegistrationService,
   CompleteRegistrationService,
   SubmitRegistrationDocumentsService,
+  ValidateRegistrationDocumentService,
 ];
 
 const queryHandlers: Provider[] = [
   CheckEmailAvailabilityQueryHandler,
   GetDocumentTypesQueryHandler,
   GetRegistrationDocumentUrlQueryHandler,
+  GetDriverDocumentsQueryHandler,
 ];
 
 const mappers: Provider[] = [RegistrationMapper, RegistrationDocumentMapper];

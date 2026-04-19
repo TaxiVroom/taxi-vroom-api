@@ -15,6 +15,7 @@ import { AuthModule } from '@modules/auth/auth.module';
 import { RegistrationModule } from '@modules/registration/registration.module';
 import { PassengerModule } from '@modules/passenger/passenger.module';
 import { DriverModule } from '@modules/driver/driver.module';
+import { AdminModule } from '@modules/admin/admin.module';
 import { validateEnv } from '@config/env.validation';
 
 const interceptors = [
@@ -46,6 +47,7 @@ const interceptors = [
     WalletModule,
     PassengerModule,
     DriverModule,
+    AdminModule,
     PrismaModule,
   ],
   controllers: [],

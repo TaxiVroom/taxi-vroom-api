@@ -31,7 +31,7 @@ export interface CreateUserProps {
 export enum UserRoles {
   passenger = 'PASSENGER',
   driver = 'DRIVER',
-  // admin = 'admin',
+  admin = 'ADMIN',
   // moderator = 'moderator',
   // guest = 'guest',
 }

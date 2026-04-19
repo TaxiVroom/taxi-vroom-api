@@ -13,8 +13,14 @@ export class DocumentTypeRepository implements DocumentTypeRepositoryPort {
   async findOneById(id: string): Promise<Option<DocumentTypeProps>> {
     const record = await this.prisma.documentType.findUnique({
       where: { id },
-      select: { name: true, backRequired: true },
+      select: { id: true, name: true, backRequired: true },
     });
     return record ? Some(record) : None;
+  }
+
+  async findAll(): Promise<DocumentTypeProps[]> {
+    return this.prisma.documentType.findMany({
+      select: { id: true, name: true, backRequired: true },
+    });
   }
 }
