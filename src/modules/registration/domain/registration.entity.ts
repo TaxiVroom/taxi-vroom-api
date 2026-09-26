@@ -1,3 +1,4 @@
+import { Result } from 'oxide.ts';
 import { AggregateRoot, AggregateID } from '@libs/ddd';
 import {
   DriverRegistrationStep,
@@ -7,6 +8,7 @@ import {
   RegistrationStep,
   UpdateRegistrationBaseProps,
 } from './registration.types';
+import { RegistrationNotCompleteError } from './registration.errors';
 
 export abstract class RegistrationEntity<
   T extends RegistrationBaseProps,
@@ -18,7 +20,7 @@ export abstract class RegistrationEntity<
 
   abstract advanceStep(data: UpdateRegistrationBaseProps): void;
 
-  abstract complete(): void;
+  abstract complete(): Result<null, RegistrationNotCompleteError>;
 
   abstract validate(): void;
 }

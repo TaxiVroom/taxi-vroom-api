@@ -11,12 +11,17 @@ import { RegistrationDocumentEntity } from '@modules/registration/domain/registr
 import { DocumentStatus } from '@modules/registration/domain/registration-document.types';
 
 import { RegistrationDocumentNotFoundError } from '@modules/registration/domain/registration-document.errors';
-import { RegistrationNotFoundError } from '@modules/registration/domain/registration.errors';
+import {
+  RegistrationNotFoundError,
+  RegistrationNotCompleteError,
+} from '@modules/registration/domain/registration.errors';
 import { ValidateRegistrationDocumentCommand } from './validate-registration-document.command';
 
 type ValidateResult = Result<
   void,
-  RegistrationDocumentNotFoundError | RegistrationNotFoundError
+  | RegistrationDocumentNotFoundError
+  | RegistrationNotFoundError
+  | RegistrationNotCompleteError
 >;
 
 @CommandHandler(ValidateRegistrationDocumentCommand)
@@ -94,12 +99,16 @@ export class ValidateRegistrationDocumentService implements ICommandHandler {
 
   private async completeRegistration(
     driverRegId: string,
-  ): Promise<Result<void, RegistrationNotFoundError>> {
+  ): Promise<
+    Result<void, RegistrationNotFoundError | RegistrationNotCompleteError>
+  > {
     const option = await this.registrationRepo.findOneById(driverRegId);
     if (option.isNone()) return Err(new RegistrationNotFoundError());
 
     const registration = option.unwrap();
-    registration.complete();
+    const completion = registration.complete();
+    if (completion.isErr()) return Err(completion.unwrapErr());
+
     await this.registrationRepo.update(registration);
     this.logger.log(
       `[completeRegistration] Registration complétée — driverRegId=${driverRegId}`,

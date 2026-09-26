@@ -11,7 +11,10 @@ import { match, Result } from 'oxide.ts';
 import { routesV1 } from '@config/app.routes';
 import { ApiErrorResponse } from '@libs/api/api-error.response';
 import { RegistrationDocumentNotFoundError } from '@modules/registration/domain/registration-document.errors';
-import { RegistrationNotFoundError } from '@modules/registration/domain/registration.errors';
+import {
+  RegistrationNotFoundError,
+  RegistrationNotCompleteError,
+} from '@modules/registration/domain/registration.errors';
 import { ValidateRegistrationDocumentCommand } from '@modules/registration/commands/validate-registration-document/validate-registration-document.command';
 
 // TODO: restrict to ADMIN role once the admin role is implemented (@Roles(UserRoles.admin))
@@ -26,7 +29,9 @@ export class ValidateRegistrationDocumentAdminHttpController {
   async validate(@Param('documentId') documentId: string): Promise<void> {
     const result: Result<
       void,
-      RegistrationDocumentNotFoundError | RegistrationNotFoundError
+      | RegistrationDocumentNotFoundError
+      | RegistrationNotFoundError
+      | RegistrationNotCompleteError
     > = await this.commandBus.execute(
       new ValidateRegistrationDocumentCommand({ documentId }),
     );

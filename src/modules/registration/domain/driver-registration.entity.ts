@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { Err, Ok, Result } from 'oxide.ts';
 import {
   ArgumentInvalidException,
   ArgumentNotProvidedException,
@@ -69,15 +70,15 @@ export class DriverRegistrationEntity extends RegistrationEntity<DriverRegistrat
       throw new ArgumentInvalidException('invalid driver registration step');
   }
 
-  complete(): void {
+  complete(): Result<null, RegistrationNotCompleteError> {
     const p = this.props;
     if (!p.email || !p.firstName || !p.lastName || !p.phone) {
-      throw new RegistrationNotCompleteError();
+      return Err(new RegistrationNotCompleteError());
     }
     this.props.currentStep = DriverRegistrationStep.COMPLETE;
     this.addEvent(
       new RegistrationCompletedDomainEvent({
-        aggregateId: this.id,
+        aggregateId: p.userId, // Firebase UID = id of the created user
         email: p.email,
         phone: p.phone,
         firstName: p.firstName,
@@ -85,6 +86,7 @@ export class DriverRegistrationEntity extends RegistrationEntity<DriverRegistrat
         role: p.role,
       }),
     );
+    return Ok(null);
   }
 
   requireCorrections(): void {

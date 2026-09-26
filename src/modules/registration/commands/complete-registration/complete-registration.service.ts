@@ -34,17 +34,8 @@ export class CompleteRegistrationService implements ICommandHandler {
     }
 
     const registration = option.unwrap();
-    try {
-      registration.complete();
-    } catch (error) {
-      if (
-        error instanceof RegistrationNotCompleteError ||
-        error instanceof RegistrationMissingPhoneError
-      ) {
-        return Err(error);
-      }
-      throw error;
-    }
+    const completion = registration.complete();
+    if (completion.isErr()) return Err(completion.unwrapErr());
 
     // update() persists COMPLETE step and calls publishEvents() → fires RegistrationCompletedDomainEvent.
     await this.registrationRepo.update(registration);

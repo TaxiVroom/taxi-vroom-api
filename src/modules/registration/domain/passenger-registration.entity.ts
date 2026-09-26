@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { Err, Ok, Result } from 'oxide.ts';
 import { ArgumentInvalidException } from '@libs/exceptions';
 import {
   RegistrationBaseProps,
@@ -66,15 +67,15 @@ export class PassengerRegistrationEntity extends RegistrationEntity<PassengerReg
     }
   }
 
-  complete(): void {
+  complete(): Result<null, RegistrationNotCompleteError> {
     const p = this.props;
     if (!p.email || !p.firstName || !p.lastName || !p.phone) {
-      throw new RegistrationNotCompleteError();
+      return Err(new RegistrationNotCompleteError());
     }
     this.props.currentStep = PassengerRegistrationStep.COMPLETE;
     this.addEvent(
       new RegistrationCompletedDomainEvent({
-        aggregateId: this.id,
+        aggregateId: p.userId, // Firebase UID = id of the created user
         email: p.email,
         phone: p.phone,
         firstName: p.firstName,
@@ -82,5 +83,6 @@ export class PassengerRegistrationEntity extends RegistrationEntity<PassengerReg
         role: p.role,
       }),
     );
+    return Ok(null);
   }
 }
