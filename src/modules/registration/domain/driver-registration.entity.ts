@@ -71,6 +71,10 @@ export class DriverRegistrationEntity extends RegistrationEntity<DriverRegistrat
   }
 
   complete(): Result<null, RegistrationNotCompleteError> {
+    // Already finalized: completing again must not create the user twice.
+    if (this.props.currentStep === DriverRegistrationStep.COMPLETE) {
+      return Ok(null);
+    }
     const p = this.props;
     if (!p.email || !p.firstName || !p.lastName || !p.phone) {
       return Err(new RegistrationNotCompleteError());
