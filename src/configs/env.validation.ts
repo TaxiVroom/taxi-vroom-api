@@ -10,6 +10,8 @@ const envSchema = z.object({
     .min(1)
     .transform((key) => key.replace(/\\n/g, '\n')),
   FIREBASE_STORAGE_BUCKET: z.string().min(1),
+  // Realtime Database outside the US: the Admin SDK must be given its URL.
+  FIREBASE_DATABASE_URL: z.string().url(),
   NODE_ENV: z
     .enum(['development', 'production', 'test'])
     .default('development'),

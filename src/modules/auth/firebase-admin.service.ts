@@ -15,6 +15,8 @@ export class FirebaseAdminService implements OnModuleInit {
         privateKey: this.configService.get('FIREBASE_PRIVATE_KEY'),
       }),
       storageBucket: this.configService.get('FIREBASE_STORAGE_BUCKET'),
+      // https://firebase.google.com/docs/database/admin/start
+      databaseURL: this.configService.get('FIREBASE_DATABASE_URL'),
     });
   }
 }

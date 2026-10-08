@@ -59,6 +59,7 @@
     "dotenv": "^16.0.2",
     "env-var": "^7.3.0",
     "firebase-admin": "^13.6.1",
+    "geofire-common": "^6.0.0",
     "graphql": "^16.6.0",
     "jest-cucumber": "^3.0.1",
     "nanoid": "^3.3.4",

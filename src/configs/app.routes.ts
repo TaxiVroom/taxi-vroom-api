@@ -10,6 +10,7 @@ const registrationFlowsRoot = 'registration-flows';
 const passengersRoot = 'passengers';
 const registrationDocumentTypesRoot = 'registration-document-types';
 const adminRoot = 'admin';
+const ridesRoot = 'rides';
 
 // Api Versions
 const v1 = 'v1';
@@ -38,5 +39,10 @@ export const routesV1 = {
   },
   admin: {
     validateRegistrationDocument: `${adminRoot}/registration-documents/:documentId/validate`,
+  },
+  ride: {
+    root: ridesRoot,
+    accept: `${ridesRoot}/:rideId/accept`,
+    decline: `${ridesRoot}/:rideId/decline`,
   },
 };

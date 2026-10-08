@@ -52,6 +52,7 @@ model User {
 model Passenger {
   userId String @id
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rides  Ride[]
 
   @@map("passengers")
 }
@@ -74,6 +75,7 @@ model Driver {
 
   documents        Document[]
   suspensionEvents DriverSuspensionEvent[]
+  rideOffers       RideOffer[]
 
   @@map("drivers")
 }
@@ -211,4 +213,126 @@ model Wallet {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("wallets")
+}
+
+/// Where a ride is in its life, from the request to its end.
+enum RideStatus {
+  SEARCHING_DRIVER
+  NO_DRIVER_FOUND
+  DRIVER_EN_ROUTE
+  DRIVER_ARRIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  PASSENGER_NO_SHOW
+}
+
+/// A ride requested by a passenger. `status` tells which sub-table holds the
+/// details of its current step: the database does not check that they
+/// match, RideEntity does.
+model Ride {
+  id                     String     @id
+  passengerId            String
+  status                 RideStatus
+  /// Null until the pickup address is looked up: the passenger's position.
+  originName             String?
+  originLatitude         Float
+  originLongitude        Float
+  destinationName        String
+  destinationLatitude    Float
+  destinationLongitude   Float
+  /// The estimate shown to the passenger when ordering: a taxi runs on its
+  /// meter, the real price is only known on arrival.
+  estimatedPriceMinCents Int
+  estimatedPriceMaxCents Int
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+
+  passenger     Passenger          @relation(fields: [passengerId], references: [userId], onDelete: Cascade)
+  offers        RideOffer[]
+  noDriverFound RideNoDriverFound?
+  boardingCode  RideBoardingCode?
+
+  @@map("rides")
+}
+
+/// The code the passenger tells the driver at pickup, so the driver can start
+/// the ride. Only its hash is stored (OWASP: never keep one-time codes in
+/// plaintext); the passenger reads the code itself from the realtime
+/// database. Removed once checked.
+model RideBoardingCode {
+  rideId   String @id
+  codeHash String
+
+  ride Ride @relation(fields: [rideId], references: [id], onDelete: Cascade)
+
+  @@map("ride_boarding_codes")
+}
+
+/// No driver accepted the ride.
+model RideNoDriverFound {
+  rideId    String   @id
+  stoppedAt DateTime
+
+  ride Ride @relation(fields: [rideId], references: [id], onDelete: Cascade)
+
+  @@map("ride_no_driver_found")
+}
+
+enum RideOfferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+/// The ride proposed to one driver, who has 15 seconds to answer. `status`
+/// tells which answer table holds the details: the database does not check
+/// that they match, RideEntity does.
+/// migration.sql adds what Prisma cannot write: one PENDING offer at most
+/// per ride, and per driver (partial unique indexes).
+model RideOffer {
+  id        String          @id
+  rideId    String
+  driverId  String
+  status    RideOfferStatus
+  offeredAt DateTime
+
+  ride       Ride                 @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  driver     Driver               @relation(fields: [driverId], references: [userId], onDelete: Cascade)
+  acceptance RideOfferAcceptance?
+  decline    RideOfferDecline?
+  expiration RideOfferExpiration?
+
+  @@map("ride_offers")
+}
+
+/// The driver accepted: the ride is theirs.
+model RideOfferAcceptance {
+  offerId    String   @id
+  acceptedAt DateTime
+
+  offer RideOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@map("ride_offer_acceptances")
+}
+
+/// The driver declined.
+model RideOfferDecline {
+  offerId    String   @id
+  declinedAt DateTime
+
+  offer RideOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@map("ride_offer_declines")
+}
+
+/// The driver did not answer in time.
+model RideOfferExpiration {
+  offerId   String   @id
+  expiredAt DateTime
+
+  offer RideOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@map("ride_offer_expirations")
 }
