@@ -37,7 +37,7 @@ export class GetDriverDocumentsQueryHandler implements IQueryHandler {
       const dto = new UploadedDocumentResponseDto();
       dto.documentTypeId = doc.documentTypeId;
       dto.reviewResult = this.buildReviewResult(
-        doc.status as unknown as DocumentStatus,  // FIXME: Not use as unknown
+        doc.status as unknown as DocumentStatus, // FIXME: Not use as unknown
         doc.rejectionEvents[0]?.reason ?? null,
       );
       return dto;
