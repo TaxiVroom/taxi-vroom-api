@@ -7,6 +7,7 @@ import {
   RideProps,
   RideStatus,
   RideStep,
+  RideSupplement,
 } from './domain/ride.types';
 import { RideResponseDto } from './dtos/ride.response.dto';
 
@@ -26,6 +27,28 @@ export type RideModel = {
   updatedAt: Date;
 };
 
+export type RideCompletionModel = {
+  completedAt: Date;
+  meterCents: number;
+  supplements: RideSupplement[];
+};
+
+export type RideArrivalModel = {
+  arrivedAt: Date;
+  start: { startedAt: Date; completion: RideCompletionModel | null } | null;
+  noShow: { reportedAt: Date } | null;
+};
+
+// The accepted offer with what followed it, each step depending on the
+// previous one: acceptance → boarding code, arrival or withdrawal → start or
+// no-show → completion.
+export type RideAcceptanceModel = {
+  acceptedAt: Date;
+  boardingCode: { code: string; failedAttempts: number } | null;
+  arrival: RideArrivalModel | null;
+  withdrawal: { withdrawnAt: Date } | null;
+};
+
 // An offer row with its answer: the answer tables keep one date each.
 export type RideOfferModel = {
   id: string;
@@ -33,7 +56,7 @@ export type RideOfferModel = {
   driverId: string;
   status: RideOfferStatus;
   offeredAt: Date;
-  acceptance: { acceptedAt: Date } | null;
+  acceptance: RideAcceptanceModel | null;
   decline: { declinedAt: Date } | null;
   expiration: { expiredAt: Date } | null;
 };
@@ -42,7 +65,7 @@ export type RideOfferModel = {
 export type RideRecord = RideModel & {
   offers: RideOfferModel[];
   noDriverFound: { stoppedAt: Date } | null;
-  boardingCode: { codeHash: string } | null;
+  cancellation: { cancelledAt: Date } | null;
 };
 
 @Injectable()
@@ -67,15 +90,15 @@ export class RideMapper
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       offers: props.offers.map((offer) =>
-        this.offerToPersistence(entity, offer),
+        this.offerToPersistence(entity.id, offer, step),
       ),
       noDriverFound:
         step.status === RideStatus.noDriverFound
           ? { stoppedAt: step.noDriverFoundAt }
           : null,
-      boardingCode:
-        step.status === RideStatus.driverEnRoute
-          ? { codeHash: step.boardingCodeHash }
+      cancellation:
+        step.status === RideStatus.cancelled
+          ? { cancelledAt: step.cancelledAt }
           : null,
     };
   }
@@ -117,19 +140,17 @@ export class RideMapper
   }
 
   private offerToPersistence(
-    entity: RideEntity,
+    rideId: string,
     offer: RideOffer,
+    step: RideStep,
   ): RideOfferModel {
     return {
       id: offer.id,
-      rideId: entity.id,
+      rideId,
       driverId: offer.driverId,
       status: offer.status,
       offeredAt: offer.offeredAt,
-      acceptance:
-        offer.status === RideOfferStatus.accepted
-          ? { acceptedAt: offer.acceptedAt }
-          : null,
+      acceptance: this.offerAcceptanceToPersistence(offer, step),
       decline:
         offer.status === RideOfferStatus.declined
           ? { declinedAt: offer.declinedAt }
@@ -139,6 +160,83 @@ export class RideMapper
           ? { expiredAt: offer.expiredAt }
           : null,
     };
+  }
+
+  private offerAcceptanceToPersistence(
+    offer: RideOffer,
+    step: RideStep,
+  ): RideAcceptanceModel | null {
+    switch (offer.status) {
+      case RideOfferStatus.accepted:
+        return this.acceptanceToPersistence(offer.acceptedAt, step);
+      case RideOfferStatus.withdrawn:
+        // What happened before the withdrawal stays as it was saved.
+        return {
+          acceptedAt: offer.acceptedAt,
+          boardingCode: null,
+          arrival: null,
+          withdrawal: { withdrawnAt: offer.withdrawnAt },
+        };
+      default:
+        return null;
+    }
+  }
+
+  // The steps after the acceptance belong to it. The boarding code is only
+  // kept while the passenger may need it.
+  private acceptanceToPersistence(
+    acceptedAt: Date,
+    step: RideStep,
+  ): RideAcceptanceModel {
+    const acceptance = { acceptedAt, boardingCode: null, withdrawal: null };
+    switch (step.status) {
+      case RideStatus.driverEnRoute:
+        return {
+          ...acceptance,
+          boardingCode: step.boardingCode,
+          arrival: null,
+        };
+      case RideStatus.driverArrived:
+        return {
+          ...acceptance,
+          boardingCode: step.boardingCode,
+          arrival: this.arrival(step.arrivedAt),
+        };
+      case RideStatus.inProgress:
+        return {
+          ...acceptance,
+          arrival: this.arrival(step.arrivedAt, {
+            startedAt: step.startedAt,
+            completion: null,
+          }),
+        };
+      case RideStatus.completed:
+        return {
+          ...acceptance,
+          arrival: this.arrival(step.arrivedAt, {
+            startedAt: step.startedAt,
+            completion: step.completion,
+          }),
+        };
+      case RideStatus.passengerNoShow:
+        return {
+          ...acceptance,
+          arrival: {
+            ...this.arrival(step.arrivedAt),
+            noShow: { reportedAt: step.reportedAt },
+          },
+        };
+      default:
+        // Cancelled: what happened before stays as it was saved.
+        return { ...acceptance, arrival: null };
+    }
+  }
+
+  private arrival(
+    arrivedAt: Date,
+    start: RideArrivalModel['start'] = null,
+  ): RideArrivalModel {
+    return { arrivedAt, start, noShow: null };
   }
 
   // The status tells which sub-table holds the step's data: a missing row is
@@ -155,13 +253,55 @@ export class RideMapper
       case RideStatus.driverEnRoute:
         return {
           status: RideStatus.driverEnRoute,
-          boardingCodeHash: this.required(record.boardingCode).codeHash,
+          boardingCode: this.required(this.acceptance(record).boardingCode),
         };
-      default:
-        throw new Error(
-          `Ride ${record.id}: status ${record.status} not handled yet`,
-        );
+      case RideStatus.driverArrived: {
+        const acceptance = this.acceptance(record);
+        return {
+          status: RideStatus.driverArrived,
+          boardingCode: this.required(acceptance.boardingCode),
+          arrivedAt: this.required(acceptance.arrival).arrivedAt,
+        };
+      }
+      case RideStatus.inProgress: {
+        const arrival = this.required(this.acceptance(record).arrival);
+        return {
+          status: RideStatus.inProgress,
+          arrivedAt: arrival.arrivedAt,
+          startedAt: this.required(arrival.start).startedAt,
+        };
+      }
+      case RideStatus.completed: {
+        const arrival = this.required(this.acceptance(record).arrival);
+        const start = this.required(arrival.start);
+        return {
+          status: RideStatus.completed,
+          arrivedAt: arrival.arrivedAt,
+          startedAt: start.startedAt,
+          completion: this.required(start.completion),
+        };
+      }
+      case RideStatus.cancelled:
+        return {
+          status: RideStatus.cancelled,
+          cancelledAt: this.required(record.cancellation).cancelledAt,
+        };
+      case RideStatus.passengerNoShow: {
+        const arrival = this.required(this.acceptance(record).arrival);
+        return {
+          status: RideStatus.passengerNoShow,
+          arrivedAt: arrival.arrivedAt,
+          reportedAt: this.required(arrival.noShow).reportedAt,
+        };
+      }
     }
+  }
+
+  private acceptance(record: RideRecord): RideAcceptanceModel {
+    const accepted = record.offers.find(
+      (offer) => offer.status === RideOfferStatus.accepted,
+    );
+    return this.required(accepted?.acceptance ?? null);
   }
 
   private offerToDomain(record: RideOfferModel): RideOffer {
@@ -191,6 +331,15 @@ export class RideMapper
           status: RideOfferStatus.expired,
           expiredAt: this.required(record.expiration).expiredAt,
         };
+      case RideOfferStatus.withdrawn: {
+        const acceptance = this.required(record.acceptance);
+        return {
+          ...base,
+          status: RideOfferStatus.withdrawn,
+          acceptedAt: acceptance.acceptedAt,
+          withdrawnAt: this.required(acceptance.withdrawal).withdrawnAt,
+        };
+      }
     }
   }
 

@@ -1,4 +1,3 @@
-import { Option } from 'oxide.ts';
 import { RepositoryPort } from '@libs/ddd';
 import { RideEntity } from '../domain/ride.entity';
 
@@ -20,10 +19,6 @@ export interface RideRepositoryPort extends RepositoryPort<RideEntity> {
   // database constraint refuses it, e.g. a driver already proposed another
   // ride.
   save(ride: RideEntity): Promise<void>;
-
-  // Loads the ride and locks it until the end of the transaction, so two
-  // answers (an acceptance and an expiration) cannot both be written.
-  findOneByIdForUpdate(id: string): Promise<Option<RideEntity>>;
 
   // Among these drivers, those already proposed a ride or driving one.
   findBusyDriverIds(driverIds: string[]): Promise<Set<string>>;

@@ -1,22 +1,31 @@
 import { AggregateID, AggregateRoot } from '@libs/ddd';
 import { ArgumentInvalidException } from '@libs/exceptions';
-import { createHash, randomInt, randomUUID } from 'crypto';
+import { randomInt, randomUUID } from 'crypto';
 import { distanceBetween } from 'geofire-common';
 import { Err, None, Ok, Option, Result, Some } from 'oxide.ts';
 import {
+  BoardingCodeLockedError,
+  NoShowTooEarlyError,
+  RideNotAssignedToDriverError,
+  RideNotOwnedByPassengerError,
   RideNotSearchingDriverError,
   RideOfferAlreadyPendingError,
   RideOfferNotPendingError,
+  RideWrongStepError,
+  WrongBoardingCodeError,
 } from './ride.errors';
 import {
+  AcceptedRideOffer,
   CreateRideProps,
   DriverCandidate,
   ExpiredRideOffer,
   PendingRideOffer,
+  RideCompletion,
   RideOffer,
   RideOfferStatus,
   RideProps,
   RideStatus,
+  RideSupplement,
 } from './ride.types';
 
 export class RideEntity extends AggregateRoot<RideProps> {
@@ -40,19 +49,64 @@ export class RideEntity extends AggregateRoot<RideProps> {
     });
   }
 
-  static hashBoardingCode(code: string): string {
-    return createHash('sha256').update(code).digest('hex');
-  }
+  // Uber's limit: then the driver calls the passenger, or cancels.
+  static readonly maxBoardingCodeAttempts = 5;
+
+  // Uber's and Bolt's wait at the pickup before the passenger counts as
+  // absent.
+  static readonly noShowWaitMs = 5 * 60_000;
+
+  // Until the passenger is in the taxi.
+  private static readonly cancellableStatuses = [
+    RideStatus.searchingDriver,
+    RideStatus.driverEnRoute,
+    RideStatus.driverArrived,
+  ];
+
+  private static readonly withdrawableStatuses = [
+    RideStatus.driverEnRoute,
+    RideStatus.driverArrived,
+  ];
+
+  // The statuses where one driver has the ride.
+  private static readonly withDriverStatuses = [
+    RideStatus.driverEnRoute,
+    RideStatus.driverArrived,
+    RideStatus.inProgress,
+    RideStatus.completed,
+    RideStatus.passengerNoShow,
+  ];
 
   get status(): RideStatus {
     return this.props.step.status;
   }
 
+  // While the passenger waits for the driver and tells it at pickup.
+  get boardingCode(): string | undefined {
+    const step = this.props.step;
+    return step.status === RideStatus.driverEnRoute ||
+      step.status === RideStatus.driverArrived
+      ? step.boardingCode.code
+      : undefined;
+  }
+
   // The driver whose offer was accepted, once there is one.
   get driverId(): string | undefined {
+    return this.acceptedOffer?.driverId;
+  }
+
+  // Once a driver took the ride, and while they keep it.
+  get acceptedOffer(): AcceptedRideOffer | undefined {
     return this.props.offers.find(
-      (offer) => offer.status === RideOfferStatus.accepted,
-    )?.driverId;
+      (offer): offer is AcceptedRideOffer =>
+        offer.status === RideOfferStatus.accepted,
+    );
+  }
+
+  // At the end of the ride, for the passenger's receipt.
+  get completion(): RideCompletion | undefined {
+    const step = this.props.step;
+    return step.status === RideStatus.completed ? step.completion : undefined;
   }
 
   get pendingOffer(): PendingRideOffer | undefined {
@@ -94,12 +148,8 @@ export class RideEntity extends AggregateRoot<RideProps> {
     return Ok(Some(offer));
   }
 
-  // The driver takes the ride. Returns the boarding code to give the
-  // passenger: only its hash is kept.
-  accept(
-    driverId: string,
-    now: Date,
-  ): Result<string, RideOfferNotPendingError> {
+  // The driver takes the ride: the passenger gets a boarding code.
+  accept(driverId: string, now: Date): Result<void, RideOfferNotPendingError> {
     const offer = this.pendingOffer;
     if (!offer || offer.driverId !== driverId) {
       return Err(new RideOfferNotPendingError());
@@ -109,12 +159,185 @@ export class RideEntity extends AggregateRoot<RideProps> {
       status: RideOfferStatus.accepted,
       acceptedAt: now,
     });
-    const boardingCode = randomInt(0, 10_000).toString().padStart(4, '0');
     this.props.step = {
       status: RideStatus.driverEnRoute,
-      boardingCodeHash: RideEntity.hashBoardingCode(boardingCode),
+      boardingCode: {
+        code: randomInt(0, 10_000).toString().padStart(4, '0'),
+        failedAttempts: 0,
+      },
     };
-    return Ok(boardingCode);
+    return Ok(undefined);
+  }
+
+  // "Je suis arrivé": the driver waits for the passenger at the pickup.
+  arrive(
+    driverId: string,
+    now: Date,
+  ): Result<void, RideNotAssignedToDriverError | RideWrongStepError> {
+    if (this.driverId !== driverId) {
+      return Err(new RideNotAssignedToDriverError());
+    }
+    const step = this.props.step;
+    if (step.status !== RideStatus.driverEnRoute) {
+      return Err(new RideWrongStepError());
+    }
+    this.props.step = {
+      status: RideStatus.driverArrived,
+      boardingCode: step.boardingCode,
+      arrivedAt: now,
+    };
+    return Ok(undefined);
+  }
+
+  // "Démarrer la course" with the code the passenger told. A wrong code is
+  // counted, so the ride must be saved even when this fails.
+  start(
+    driverId: string,
+    code: string,
+    now: Date,
+  ): Result<
+    void,
+    | RideNotAssignedToDriverError
+    | RideWrongStepError
+    | WrongBoardingCodeError
+    | BoardingCodeLockedError
+  > {
+    if (this.driverId !== driverId) {
+      return Err(new RideNotAssignedToDriverError());
+    }
+    const step = this.props.step;
+    if (step.status !== RideStatus.driverArrived) {
+      return Err(new RideWrongStepError());
+    }
+    const { boardingCode } = step;
+    if (boardingCode.failedAttempts >= RideEntity.maxBoardingCodeAttempts) {
+      return Err(new BoardingCodeLockedError());
+    }
+    if (code !== boardingCode.code) {
+      // Maybe lock the ride: two attempts at once could count as one.
+      const failedAttempts = boardingCode.failedAttempts + 1;
+      this.props.step = {
+        ...step,
+        boardingCode: { ...boardingCode, failedAttempts },
+      };
+      return Err(
+        new WrongBoardingCodeError(
+          RideEntity.maxBoardingCodeAttempts - failedAttempts,
+        ),
+      );
+    }
+    this.props.step = {
+      status: RideStatus.inProgress,
+      arrivedAt: step.arrivedAt,
+      startedAt: now,
+    };
+    return Ok(undefined);
+  }
+
+  // "Valider et repasser libre": the passenger is at their destination.
+  complete(
+    driverId: string,
+    meterCents: number,
+    supplements: RideSupplement[],
+    now: Date,
+  ): Result<void, RideNotAssignedToDriverError | RideWrongStepError> {
+    if (this.driverId !== driverId) {
+      return Err(new RideNotAssignedToDriverError());
+    }
+    const step = this.props.step;
+    if (step.status !== RideStatus.inProgress) {
+      return Err(new RideWrongStepError());
+    }
+    this.props.step = {
+      ...step,
+      status: RideStatus.completed,
+      completion: { completedAt: now, meterCents, supplements },
+    };
+    return Ok(undefined);
+  }
+
+  // What the passenger pays: the meter, then the supplements.
+  get totalCents(): number | undefined {
+    const step = this.props.step;
+    if (step.status !== RideStatus.completed) return undefined;
+    const { meterCents, supplements } = step.completion;
+    return supplements.reduce(
+      (total, s) => total + s.unitPriceCents * s.quantity,
+      meterCents,
+    );
+  }
+
+  // The passenger gives the ride up, for good, until they are in the taxi.
+  // An offer waiting for an answer stops with the ride.
+  cancel(
+    passengerId: string,
+    now: Date,
+  ): Result<void, RideNotOwnedByPassengerError | RideWrongStepError> {
+    if (this.props.passengerId !== passengerId) {
+      return Err(new RideNotOwnedByPassengerError());
+    }
+    if (!RideEntity.cancellableStatuses.includes(this.status)) {
+      return Err(new RideWrongStepError());
+    }
+    const pending = this.pendingOffer;
+    if (pending) {
+      this.replaceOffer({
+        ...pending,
+        status: RideOfferStatus.expired,
+        expiredAt: now,
+      });
+    }
+    this.props.step = { status: RideStatus.cancelled, cancelledAt: now };
+    return Ok(undefined);
+  }
+
+  // The driver gives the ride up before the passenger got in: it goes to the
+  // next driver, never to them again.
+  withdraw(
+    driverId: string,
+    now: Date,
+  ): Result<void, RideNotAssignedToDriverError | RideWrongStepError> {
+    const accepted = this.acceptedOffer;
+    if (!accepted || accepted.driverId !== driverId) {
+      return Err(new RideNotAssignedToDriverError());
+    }
+    if (!RideEntity.withdrawableStatuses.includes(this.status)) {
+      return Err(new RideWrongStepError());
+    }
+    this.replaceOffer({
+      ...accepted,
+      status: RideOfferStatus.withdrawn,
+      withdrawnAt: now,
+    });
+    this.props.step = { status: RideStatus.searchingDriver };
+    return Ok(undefined);
+  }
+
+  // "Client absent", once the driver waited long enough at the pickup.
+  reportNoShow(
+    driverId: string,
+    now: Date,
+  ): Result<
+    void,
+    RideNotAssignedToDriverError | RideWrongStepError | NoShowTooEarlyError
+  > {
+    if (this.driverId !== driverId) {
+      return Err(new RideNotAssignedToDriverError());
+    }
+    const step = this.props.step;
+    if (step.status !== RideStatus.driverArrived) {
+      return Err(new RideWrongStepError());
+    }
+    const waitedMs = now.getTime() - step.arrivedAt.getTime();
+    if (waitedMs < RideEntity.noShowWaitMs)
+      return Err(new NoShowTooEarlyError());
+
+    this.props.step = {
+      status: RideStatus.passengerNoShow,
+      arrivedAt: step.arrivedAt,
+      reportedAt: now,
+    };
+    return Ok(undefined);
   }
 
   decline(driverId: string, now: Date): Result<void, RideOfferNotPendingError> {
@@ -162,10 +385,17 @@ export class RideEntity extends AggregateRoot<RideProps> {
         'Ride: a pending offer only while searching a driver',
       );
     }
-    const hasDriver = this.status === RideStatus.driverEnRoute;
+    // A cancelled ride may have had a driver, or not.
+    if (this.status === RideStatus.cancelled) {
+      if (accepted.length > 1) {
+        throw new ArgumentInvalidException('Ride: one accepted offer at most');
+      }
+      return;
+    }
+    const hasDriver = RideEntity.withDriverStatuses.includes(this.status);
     if (accepted.length !== (hasDriver ? 1 : 0)) {
       throw new ArgumentInvalidException(
-        'Ride: one accepted offer exactly once a driver is en route',
+        'Ride: one accepted offer exactly while a driver has the ride',
       );
     }
   }

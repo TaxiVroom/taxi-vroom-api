@@ -1,6 +1,7 @@
 import { RidePerson } from '@modules/ride/database/ride.repository.port';
 import {
   EstimatedPrice,
+  RideCompletion,
   RidePickup,
   RidePlace,
   RideStatus,
@@ -24,10 +25,19 @@ export interface RideNotice {
   status: RideStatus;
   pickup: RidePickup;
   destination: RidePlace;
+  // Shown to the passenger during the ride: the real price comes from the
+  // taxi's meter.
+  estimatedPrice: EstimatedPrice;
   passenger: RidePerson;
   // Once a driver accepted the ride.
   driverId: string | null;
   driver: RidePerson | null;
+  // Once the ride ended: the passenger's receipt.
+  completion: RideReceipt | null;
+}
+
+export interface RideReceipt extends RideCompletion {
+  totalCents: number;
 }
 
 // Tells the apps about rides as they happen: they listen to the realtime
@@ -40,13 +50,10 @@ export interface RideRealtimePort {
 
   publishRide(ride: RideNotice): Promise<void>;
 
-  // Readable by the passenger only: the driver must hear it from them.
-  publishBoardingCode(
-    rideId: string,
-    passengerId: string,
-    code: string,
-  ): Promise<void>;
-
   // Hides the driver from the free taxis shown to passengers.
   markDriverBusy(driverId: string): Promise<void>;
+
+  // Shows the driver again among the free taxis, once the ride is over for
+  // them.
+  markDriverAvailable(driverId: string): Promise<void>;
 }

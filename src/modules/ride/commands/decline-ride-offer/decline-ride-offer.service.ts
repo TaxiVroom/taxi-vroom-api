@@ -40,7 +40,7 @@ export class DeclineRideOfferService implements ICommandHandler {
   private async decline(
     command: DeclineRideOfferCommand,
   ): Promise<Result<Declined, RideNotFoundError | RideOfferNotPendingError>> {
-    const found = await this.rideRepo.findOneByIdForUpdate(command.rideId);
+    const found = await this.rideRepo.findOneById(command.rideId);
     if (found.isNone()) return Err(new RideNotFoundError());
 
     const ride = found.unwrap();

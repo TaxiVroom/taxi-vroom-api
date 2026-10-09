@@ -5,7 +5,14 @@ import { PrismaRepositoryBase } from '@libs/db/prisma-repository.base';
 import { PrismaService } from '@libs/db/prisma.service';
 import { PrismaErrorCode } from '@libs/db/prisma-error.codes';
 import { ConflictException } from '@libs/exceptions';
-import { RideMapper, RideOfferModel, RideRecord } from '../ride.mapper';
+import {
+  RideAcceptanceModel,
+  RideArrivalModel,
+  RideCompletionModel,
+  RideMapper,
+  RideOfferModel,
+  RideRecord,
+} from '../ride.mapper';
 import { RideEntity } from '../domain/ride.entity';
 import { RideOfferStatus, RideStatus } from '../domain/ride.types';
 import {
@@ -22,9 +29,28 @@ const activeRideStatuses = [
 ];
 
 const withSubTables = {
-  offers: { include: { acceptance: true, decline: true, expiration: true } },
+  offers: {
+    include: {
+      acceptance: {
+        include: {
+          boardingCode: true,
+          arrival: {
+            include: {
+              start: {
+                include: { completion: { include: { supplements: true } } },
+              },
+              noShow: true,
+            },
+          },
+          withdrawal: true,
+        },
+      },
+      decline: true,
+      expiration: true,
+    },
+  },
   noDriverFound: true,
-  boardingCode: true,
+  cancellation: true,
 };
 
 const personFields = { firstName: true, lastName: true, phone: true };
@@ -52,15 +78,9 @@ export class RideRepository
     return record ? Some(this.mapper.toDomain(record)) : None;
   }
 
-  async findOneByIdForUpdate(id: string): Promise<Option<RideEntity>> {
-    await this.client
-      .$queryRaw`SELECT id FROM rides WHERE id = ${id} FOR UPDATE`;
-    return this.findOneById(id);
-  }
-
   async save(ride: RideEntity): Promise<void> {
     ride.validate();
-    const { offers, noDriverFound, boardingCode, ...row } =
+    const { offers, noDriverFound, cancellation, ...row } =
       this.mapper.toPersistence(ride);
     try {
       await this.model.upsert({
@@ -78,11 +98,11 @@ export class RideRepository
           update: noDriverFound,
         });
       }
-      if (boardingCode) {
-        await this.client.rideBoardingCode.upsert({
+      if (cancellation) {
+        await this.client.rideCancellation.upsert({
           where: { rideId: row.id },
-          create: { rideId: row.id, ...boardingCode },
-          update: boardingCode,
+          create: { rideId: row.id, ...cancellation },
+          update: cancellation,
         });
       }
     } catch (error: any) {
@@ -133,13 +153,7 @@ export class RideRepository
       create: row,
       update: { status: row.status },
     });
-    if (acceptance) {
-      await this.client.rideOfferAcceptance.upsert({
-        where: { offerId: row.id },
-        create: { offerId: row.id, ...acceptance },
-        update: acceptance,
-      });
-    }
+    if (acceptance) await this.saveAcceptance(row.id, acceptance);
     if (decline) {
       await this.client.rideOfferDecline.upsert({
         where: { offerId: row.id },
@@ -154,5 +168,89 @@ export class RideRepository
         update: expiration,
       });
     }
+  }
+
+  // Each step after the one it depends on: acceptance, then boarding code,
+  // arrival or withdrawal, then start or no-show, then completion.
+  private async saveAcceptance(
+    offerId: string,
+    { acceptedAt, boardingCode, arrival, withdrawal }: RideAcceptanceModel,
+  ): Promise<void> {
+    await this.client.rideOfferAcceptance.upsert({
+      where: { offerId },
+      create: { offerId, acceptedAt },
+      update: { acceptedAt },
+    });
+    if (boardingCode) {
+      await this.client.rideBoardingCode.upsert({
+        where: { offerId },
+        create: { offerId, ...boardingCode },
+        update: boardingCode,
+      });
+    } else {
+      // Not needed anymore once the ride started.
+      await this.client.rideBoardingCode.deleteMany({ where: { offerId } });
+    }
+    if (arrival) await this.saveArrival(offerId, arrival);
+    if (withdrawal) {
+      await this.client.rideOfferWithdrawal.upsert({
+        where: { offerId },
+        create: { offerId, ...withdrawal },
+        update: withdrawal,
+      });
+    }
+  }
+
+  private async saveArrival(
+    offerId: string,
+    { arrivedAt, start, noShow }: RideArrivalModel,
+  ): Promise<void> {
+    await this.client.rideArrival.upsert({
+      where: { offerId },
+      create: { offerId, arrivedAt },
+      update: { arrivedAt },
+    });
+    if (start) {
+      const { startedAt, completion } = start;
+      await this.client.rideStart.upsert({
+        where: { offerId },
+        create: { offerId, startedAt },
+        update: { startedAt },
+      });
+      if (completion) await this.saveCompletion(offerId, completion);
+    }
+    if (noShow) {
+      await this.client.rideNoShow.upsert({
+        where: { offerId },
+        create: { offerId, ...noShow },
+        update: noShow,
+      });
+    }
+  }
+
+  // Written once: a completed ride does not change anymore.
+  private async saveCompletion(
+    offerId: string,
+    { completedAt, meterCents, supplements }: RideCompletionModel,
+  ): Promise<void> {
+    const saved = await this.client.rideCompletion.findUnique({
+      where: { offerId },
+    });
+    if (saved) return;
+    await this.client.rideCompletion.create({
+      data: {
+        offerId,
+        completedAt,
+        meterCents,
+        supplements: {
+          create: supplements.map((s) => ({
+            supplementId: s.supplementId,
+            label: s.label,
+            unitPriceCents: s.unitPriceCents,
+            quantity: s.quantity,
+          })),
+        },
+      },
+    });
   }
 }

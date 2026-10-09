@@ -33,7 +33,7 @@ export class ExpireRideOfferService implements ICommandHandler {
   private async expire(
     command: ExpireRideOfferCommand,
   ): Promise<Expired | undefined> {
-    const found = await this.rideRepo.findOneByIdForUpdate(command.rideId);
+    const found = await this.rideRepo.findOneById(command.rideId);
     if (found.isNone()) return undefined;
 
     const ride = found.unwrap();

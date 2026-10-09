@@ -14,7 +14,7 @@ import { RideOfferTimer } from '@modules/ride/application/ride-offer-timer';
 import { RidePublisher } from '@modules/ride/application/ride-publisher';
 import { AcceptRideOfferCommand } from './accept-ride-offer.command';
 
-type Accepted = { ride: RideEntity; offerId: string; boardingCode: string };
+type Accepted = { ride: RideEntity; offerId: string };
 
 @CommandHandler(AcceptRideOfferCommand)
 export class AcceptRideOfferService implements ICommandHandler {
@@ -33,15 +33,10 @@ export class AcceptRideOfferService implements ICommandHandler {
     const result = await this.rideRepo.transaction(() => this.accept(command));
     if (result.isErr()) return Err(result.unwrapErr());
 
-    const { ride, offerId, boardingCode } = result.unwrap();
+    const { ride, offerId } = result.unwrap();
     this.offerTimer.stop(offerId);
     await this.realtime.withdrawOffer(command.driverId);
     await this.realtime.markDriverBusy(command.driverId);
-    await this.realtime.publishBoardingCode(
-      ride.id,
-      ride.getProps().passengerId,
-      boardingCode,
-    );
     await this.publisher.publishRide(ride);
     return Ok(ride.id);
   }
@@ -49,7 +44,7 @@ export class AcceptRideOfferService implements ICommandHandler {
   private async accept(
     command: AcceptRideOfferCommand,
   ): Promise<Result<Accepted, RideNotFoundError | RideOfferNotPendingError>> {
-    const found = await this.rideRepo.findOneByIdForUpdate(command.rideId);
+    const found = await this.rideRepo.findOneById(command.rideId);
     if (found.isNone()) return Err(new RideNotFoundError());
 
     const ride = found.unwrap();
@@ -59,6 +54,6 @@ export class AcceptRideOfferService implements ICommandHandler {
       return Err(new RideOfferNotPendingError());
 
     await this.rideRepo.save(ride);
-    return Ok({ ride, offerId, boardingCode: accepted.unwrap() });
+    return Ok({ ride, offerId });
   }
 }

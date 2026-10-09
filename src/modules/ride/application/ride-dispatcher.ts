@@ -51,9 +51,7 @@ export class RideDispatcher {
     let triedDriverId: string | undefined;
     try {
       const ride = await this.rideRepo.transaction(async () => {
-        const locked = (
-          await this.rideRepo.findOneByIdForUpdate(rideId)
-        ).unwrap();
+        const found = (await this.rideRepo.findOneById(rideId)).unwrap();
         const busy = await this.rideRepo.findBusyDriverIds(
           onlineDrivers.map((driver) => driver.driverId),
         );
@@ -62,11 +60,11 @@ export class RideDispatcher {
           isBusy:
             busy.has(driver.driverId) || takenByOtherRides.has(driver.driverId),
         }));
-        const offer = locked.offerToClosestDriver(candidates, new Date());
+        const offer = found.offerToClosestDriver(candidates, new Date());
         if (offer.isErr()) return undefined;
-        triedDriverId = locked.pendingOffer?.driverId;
-        await this.rideRepo.save(locked);
-        return locked;
+        triedDriverId = found.pendingOffer?.driverId;
+        await this.rideRepo.save(found);
+        return found;
       });
       if (ride) await this.announce(ride);
     } catch (error) {

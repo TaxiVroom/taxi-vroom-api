@@ -10,7 +10,6 @@ import {
 // its own data:
 // - rideOffers/<driverId>: the ride proposed to the driver
 // - rides/<rideId>: the ride, for its passenger and its driver
-// - rideBoardingCodes/<rideId>: the boarding code, for the passenger only
 // Writes as in https://firebase.google.com/docs/database/admin/save-data
 @Injectable()
 export class FirebaseRideRealtimeAdapter implements RideRealtimePort {
@@ -32,36 +31,51 @@ export class FirebaseRideRealtimeAdapter implements RideRealtimePort {
   }
 
   async publishRide(ride: RideNotice): Promise<void> {
-    await getDatabase().ref(`rides/${ride.rideId}`).set({
-      passengerId: ride.passengerId,
-      driverId: ride.driverId,
-      status: ride.status,
-      pickup: ride.pickup,
-      destination: ride.destination,
-      passenger: ride.passenger,
-      driver: ride.driver,
-      updatedAt: ServerValue.TIMESTAMP,
-    });
-  }
-
-  async publishBoardingCode(
-    rideId: string,
-    passengerId: string,
-    code: string,
-  ): Promise<void> {
     await getDatabase()
-      .ref(`rideBoardingCodes/${rideId}`)
-      .set({ passengerId, code });
+      .ref(`rides/${ride.rideId}`)
+      .set({
+        passengerId: ride.passengerId,
+        driverId: ride.driverId,
+        status: ride.status,
+        pickup: ride.pickup,
+        destination: ride.destination,
+        estimatedPriceMinCents: ride.estimatedPrice.minCents,
+        estimatedPriceMaxCents: ride.estimatedPrice.maxCents,
+        passenger: ride.passenger,
+        driver: ride.driver,
+        completion: ride.completion && {
+          completedAt: ride.completion.completedAt.getTime(),
+          meterCents: ride.completion.meterCents,
+          supplements: ride.completion.supplements.map((s) => ({
+            label: s.label,
+            unitPriceCents: s.unitPriceCents,
+            quantity: s.quantity,
+          })),
+          totalCents: ride.completion.totalCents,
+        },
+        updatedAt: ServerValue.TIMESTAMP,
+      });
   }
 
   async markDriverBusy(driverId: string): Promise<void> {
-    // A transaction, so the driver's entry is only changed if it exists: the
-    // handler may first get null from the local cache, and is then called
-    // again with the server's value.
+    await this.setDriverAvailable(driverId, false);
+  }
+
+  async markDriverAvailable(driverId: string): Promise<void> {
+    await this.setDriverAvailable(driverId, true);
+  }
+
+  private async setDriverAvailable(
+    driverId: string,
+    available: boolean,
+  ): Promise<void> {
+    // A transaction, so the driver's entry is only changed if it exists (a
+    // driver offline stays offline): the handler may first get null from the
+    // local cache, and is then called again with the server's value.
     await getDatabase()
       .ref(`drivers/${driverId}`)
       .transaction((driver) =>
-        driver === null ? null : { ...driver, available: false },
+        driver === null ? null : { ...driver, available },
       );
   }
 }

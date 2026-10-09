@@ -19,11 +19,32 @@ import { AcceptRideOfferService } from './commands/accept-ride-offer/accept-ride
 import { DeclineRideOfferHttpController } from './commands/decline-ride-offer/decline-ride-offer.http.controller';
 import { DeclineRideOfferService } from './commands/decline-ride-offer/decline-ride-offer.service';
 import { ExpireRideOfferService } from './commands/expire-ride-offer/expire-ride-offer.service';
+import { ArriveAtPickupHttpController } from './commands/arrive-at-pickup/arrive-at-pickup.http.controller';
+import { ArriveAtPickupService } from './commands/arrive-at-pickup/arrive-at-pickup.service';
+import { StartRideHttpController } from './commands/start-ride/start-ride.http.controller';
+import { StartRideService } from './commands/start-ride/start-ride.service';
+import { CompleteRideHttpController } from './commands/complete-ride/complete-ride.http.controller';
+import { CompleteRideService } from './commands/complete-ride/complete-ride.service';
+import { CancelRideHttpController } from './commands/cancel-ride/cancel-ride.http.controller';
+import { CancelRideService } from './commands/cancel-ride/cancel-ride.service';
+import { WithdrawFromRideHttpController } from './commands/withdraw-from-ride/withdraw-from-ride.http.controller';
+import { WithdrawFromRideService } from './commands/withdraw-from-ride/withdraw-from-ride.service';
+import { ReportNoShowHttpController } from './commands/report-no-show/report-no-show.http.controller';
+import { ReportNoShowService } from './commands/report-no-show/report-no-show.service';
+import { GetBoardingCodeHttpController } from './queries/get-boarding-code/get-boarding-code.http.controller';
+import { GetBoardingCodeQueryHandler } from './queries/get-boarding-code/get-boarding-code.query-handler';
 
 const httpControllers = [
   RequestRideHttpController,
   AcceptRideOfferHttpController,
   DeclineRideOfferHttpController,
+  ArriveAtPickupHttpController,
+  StartRideHttpController,
+  CompleteRideHttpController,
+  CancelRideHttpController,
+  WithdrawFromRideHttpController,
+  ReportNoShowHttpController,
+  GetBoardingCodeHttpController,
 ];
 
 const commandHandlers: Provider[] = [
@@ -31,7 +52,15 @@ const commandHandlers: Provider[] = [
   AcceptRideOfferService,
   DeclineRideOfferService,
   ExpireRideOfferService,
+  ArriveAtPickupService,
+  StartRideService,
+  CompleteRideService,
+  CancelRideService,
+  WithdrawFromRideService,
+  ReportNoShowService,
 ];
+
+const queryHandlers: Provider[] = [GetBoardingCodeQueryHandler];
 
 const applicationServices: Provider[] = [
   RideDispatcher,
@@ -59,6 +88,7 @@ const adapters: Provider[] = [
     ...adapters,
     ...applicationServices,
     ...commandHandlers,
+    ...queryHandlers,
     ...mappers,
   ],
 })

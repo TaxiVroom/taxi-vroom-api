@@ -16,15 +16,22 @@ export class RidePublisher {
   async publishRide(ride: RideEntity): Promise<void> {
     const participants = await this.rideRepo.findParticipants(ride.id);
     const props = ride.getProps();
+    const completion = ride.completion;
+    const totalCents = ride.totalCents;
     await this.realtime.publishRide({
       rideId: ride.id,
       passengerId: props.passengerId,
       status: ride.status,
       pickup: props.origin,
       destination: props.destination,
+      estimatedPrice: props.estimatedPrice,
       passenger: participants.passenger,
       driverId: ride.driverId ?? null,
       driver: participants.driver,
+      completion:
+        completion && totalCents !== undefined
+          ? { ...completion, totalCents }
+          : null,
     });
   }
 

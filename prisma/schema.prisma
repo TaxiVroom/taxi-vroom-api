@@ -251,22 +251,98 @@ model Ride {
   passenger     Passenger          @relation(fields: [passengerId], references: [userId], onDelete: Cascade)
   offers        RideOffer[]
   noDriverFound RideNoDriverFound?
-  boardingCode  RideBoardingCode?
+  cancellation  RideCancellation?
 
   @@map("rides")
 }
 
-/// The code the passenger tells the driver at pickup, so the driver can start
-/// the ride. Only its hash is stored (OWASP: never keep one-time codes in
-/// plaintext); the passenger reads the code itself from the realtime
-/// database. Removed once checked.
-model RideBoardingCode {
-  rideId   String @id
-  codeHash String
+/// The passenger cancelled the ride, for good: while a driver was searched,
+/// was coming, or was waiting.
+model RideCancellation {
+  rideId      String   @id
+  cancelledAt DateTime
 
   ride Ride @relation(fields: [rideId], references: [id], onDelete: Cascade)
 
+  @@map("ride_cancellations")
+}
+
+/// The code the passenger tells the driver who accepted the ride, so they can
+/// start it. Kept in plaintext: the passenger gets it from the API (the
+/// driver never can), and it is removed once the ride starts.
+model RideBoardingCode {
+  offerId        String @id
+  code           String
+  /// Wrong codes typed by the driver: 5 at most, then starting is blocked.
+  failedAttempts Int    @default(0)
+
+  acceptance RideOfferAcceptance @relation(fields: [offerId], references: [offerId], onDelete: Cascade)
+
   @@map("ride_boarding_codes")
+}
+
+/// The driver who accepted arrived at the pickup. Only possible after their
+/// acceptance.
+model RideArrival {
+  offerId   String   @id
+  arrivedAt DateTime
+
+  acceptance RideOfferAcceptance @relation(fields: [offerId], references: [offerId], onDelete: Cascade)
+  start      RideStart?
+  noShow     RideNoShow?
+
+  @@map("ride_arrivals")
+}
+
+/// The passenger never came: reported by the driver 5 minutes after their
+/// arrival at the earliest.
+model RideNoShow {
+  offerId    String   @id
+  reportedAt DateTime
+
+  arrival RideArrival @relation(fields: [offerId], references: [offerId], onDelete: Cascade)
+
+  @@map("ride_no_shows")
+}
+
+/// The passenger got in: the ride started. Only possible after the driver's
+/// arrival.
+model RideStart {
+  offerId   String   @id
+  startedAt DateTime
+
+  arrival    RideArrival     @relation(fields: [offerId], references: [offerId], onDelete: Cascade)
+  completion RideCompletion?
+
+  @@map("ride_starts")
+}
+
+/// The ride ended: what the taxi's meter showed. The total adds the
+/// supplements. Only possible after the start.
+model RideCompletion {
+  offerId     String   @id
+  completedAt DateTime
+  meterCents  Int
+
+  start       RideStart                  @relation(fields: [offerId], references: [offerId], onDelete: Cascade)
+  supplements RideCompletionSupplement[]
+
+  @@map("ride_completions")
+}
+
+/// A supplement the driver added at the end of the ride, e.g. 2 bulky
+/// luggages.
+model RideCompletionSupplement {
+  offerId        String
+  supplementId   String
+  label          String
+  unitPriceCents Int
+  quantity       Int
+
+  completion RideCompletion @relation(fields: [offerId], references: [offerId], onDelete: Cascade)
+
+  @@id([offerId, supplementId])
+  @@map("ride_completion_supplements")
 }
 
 /// No driver accepted the ride.
@@ -284,6 +360,7 @@ enum RideOfferStatus {
   ACCEPTED
   DECLINED
   EXPIRED
+  WITHDRAWN
 }
 
 /// The ride proposed to one driver, who has 15 seconds to answer. `status`
@@ -312,9 +389,23 @@ model RideOfferAcceptance {
   offerId    String   @id
   acceptedAt DateTime
 
-  offer RideOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  offer        RideOffer            @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  boardingCode RideBoardingCode?
+  arrival      RideArrival?
+  withdrawal   RideOfferWithdrawal?
 
   @@map("ride_offer_acceptances")
+}
+
+/// The driver gave the ride up after accepting it, before the passenger got
+/// in: the ride is proposed to the next driver, never to them again.
+model RideOfferWithdrawal {
+  offerId     String   @id
+  withdrawnAt DateTime
+
+  acceptance RideOfferAcceptance @relation(fields: [offerId], references: [offerId], onDelete: Cascade)
+
+  @@map("ride_offer_withdrawals")
 }
 
 /// The driver declined.
