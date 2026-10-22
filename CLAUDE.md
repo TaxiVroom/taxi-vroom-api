@@ -1,6 +1,6 @@
 # Working with the user
 
-Never run `npm` commands yourself (`npm run ...`, `npm install`, `npx prisma ...`, etc.) — give the exact command as text and wait for the user to run it and paste back the result before continuing or drawing conclusions from it. Other shell commands (git, file inspection, etc.) are fine to run directly.
+Never run `npm` commands yourself (`npm run ...`, `npm install`, `npx prisma ...`, etc.) — give the exact command as text and wait for the user to run it and paste back the result before continuing or drawing conclusions from it. Other shell commands (git, file inspection, etc.) are fine to run directly. Exception: `npx tsc --noEmit` and `npm run lint` are run directly, without asking.
 
 # Commands
 
@@ -10,6 +10,7 @@ Never run `npm` commands yourself (`npm run ...`, `npm install`, `npx prisma ...
 - `npm run lint` — eslint --fix.
 - `npm run deps:validate` — checks the architecture boundaries below via `.dependency-cruiser.js`. Run it after adding or moving a file across domain/application/infrastructure/api — a wrong import direction fails this even when `tsc` is happy.
 - Prisma, not Slonik: schema + migrations live in `prisma/` (`prisma/schema.prisma`, `prisma/migrations/`), not `database/`. `npm run migration:dev --name X` creates and applies a dev migration; `npm run migration:deploy` applies pending migrations (production); `npm run migration:reset[:tests]` drops, recreates and remigrates; `npm run migration:status` checks status; `npm run db:push[:tests]` pushes the schema without a migration file (used to sync the test DB); `npm run prisma:generate` regenerates the client; `npm run prisma:studio` opens the Prisma data browser.
+- After `migration:dev`, run `npm run prisma:generate`: since Prisma 7, `migrate dev` no longer regenerates the client. `tsc` won't catch a stale client: `PrismaRepositoryBase.client` is typed `any`.
 - DB env vars: `.env.example` (DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_NAME).
 
 # Architecture: DDD Hexagonal + CQRS
