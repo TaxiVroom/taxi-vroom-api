@@ -1,5 +1,7 @@
+import { Option } from 'oxide.ts';
 import { RepositoryPort } from '@libs/ddd';
 import { RideEntity } from '../domain/ride.entity';
+import { TaxiTariff } from '../domain/ride.types';
 
 export interface RidePerson {
   firstName: string;
@@ -24,4 +26,8 @@ export interface RideRepositoryPort extends RepositoryPort<RideEntity> {
   findBusyDriverIds(driverIds: string[]): Promise<Set<string>>;
 
   findParticipants(rideId: string): Promise<RideParticipants>;
+
+  // The tariffs in force in the département at that time: the latest arrêté
+  // already valid. None where the app does not work yet.
+  findTariff(departmentCode: string, at: Date): Promise<Option<TaxiTariff>>;
 }

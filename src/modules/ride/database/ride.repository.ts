@@ -14,7 +14,12 @@ import {
   RideRecord,
 } from '../ride.mapper';
 import { RideEntity } from '../domain/ride.entity';
-import { RideOfferStatus, RideStatus } from '../domain/ride.types';
+import {
+  HolidayZone,
+  RideOfferStatus,
+  RideStatus,
+  TaxiTariff,
+} from '../domain/ride.types';
 import {
   RideParticipants,
   RidePerson,
@@ -144,6 +149,35 @@ export class RideRepository
     });
     const driver: RidePerson | undefined = ride.offers[0]?.driver.user;
     return { passenger: ride.passenger.user, driver: driver ?? null };
+  }
+
+  async findTariff(
+    departmentCode: string,
+    at: Date,
+  ): Promise<Option<TaxiTariff>> {
+    const row = await this.client.taxiTariff.findFirst({
+      where: { departmentCode, validFrom: { lte: at } },
+      orderBy: { validFrom: 'desc' },
+    });
+    if (!row) return None;
+    return Some({
+      id: row.id,
+      departmentCode: row.departmentCode,
+      validFrom: row.validFrom,
+      decree: row.decree,
+      pickupCents: row.pickupCents,
+      kmCents: {
+        a: row.kmCentsA,
+        b: row.kmCentsB,
+        c: row.kmCentsC,
+        d: row.kmCentsD,
+      },
+      hourlyCents: row.hourlyCents,
+      minimumFareCents: row.minimumFareCents,
+      nightStartMinute: row.nightStartMinute,
+      nightEndMinute: row.nightEndMinute,
+      holidayZone: row.holidayZone as HolidayZone,
+    });
   }
 
   private async saveOffer(offer: RideOfferModel): Promise<void> {

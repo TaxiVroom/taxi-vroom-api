@@ -8,8 +8,13 @@ import {
   RideStatus,
   RideStep,
   RideSupplement,
+  TaxiTariff,
 } from './domain/ride.types';
 import { RideResponseDto } from './dtos/ride.response.dto';
+import {
+  RideEstimateResponseDto,
+  TaxiTariffResponseDto,
+} from './dtos/ride-estimate.response.dto';
 
 export type RideModel = {
   id: string;
@@ -23,6 +28,7 @@ export type RideModel = {
   destinationLongitude: number;
   estimatedPriceMinCents: number;
   estimatedPriceMaxCents: number;
+  tariffId: string;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -87,6 +93,7 @@ export class RideMapper
       destinationLongitude: props.destination.longitude,
       estimatedPriceMinCents: props.estimatedPrice.minCents,
       estimatedPriceMaxCents: props.estimatedPrice.maxCents,
+      tariffId: props.tariffId,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       offers: props.offers.map((offer) =>
@@ -124,6 +131,7 @@ export class RideMapper
           minCents: record.estimatedPriceMinCents,
           maxCents: record.estimatedPriceMaxCents,
         },
+        tariffId: record.tariffId,
         step: this.stepToDomain(record),
         offers: [...record.offers]
           .sort((a, b) => a.offeredAt.getTime() - b.offeredAt.getTime())
@@ -136,6 +144,38 @@ export class RideMapper
     const response = new RideResponseDto();
     response.id = entity.id;
     response.status = entity.status;
+    return response;
+  }
+
+  toEstimateResponse(
+    ride: RideEntity,
+    tariff: TaxiTariff,
+    approachSeconds: number,
+  ): RideEstimateResponseDto {
+    const { estimatedPrice } = ride.getProps();
+    const response = new RideEstimateResponseDto();
+    response.id = ride.id;
+    response.minPriceCents = estimatedPrice.minCents;
+    response.maxPriceCents = estimatedPrice.maxCents;
+    response.pickupEtaMinutes = Math.max(1, Math.round(approachSeconds / 60));
+    response.tariff = this.tariffToResponse(tariff);
+    return response;
+  }
+
+  private tariffToResponse(tariff: TaxiTariff): TaxiTariffResponseDto {
+    const response = new TaxiTariffResponseDto();
+    response.departmentCode = tariff.departmentCode;
+    response.validFrom = tariff.validFrom.toISOString().slice(0, 10);
+    response.decree = tariff.decree;
+    response.pickupCents = tariff.pickupCents;
+    response.kmCentsA = tariff.kmCents.a;
+    response.kmCentsB = tariff.kmCents.b;
+    response.kmCentsC = tariff.kmCents.c;
+    response.kmCentsD = tariff.kmCents.d;
+    response.hourlyCents = tariff.hourlyCents;
+    response.minimumFareCents = tariff.minimumFareCents;
+    response.nightStartMinute = tariff.nightStartMinute;
+    response.nightEndMinute = tariff.nightEndMinute;
     return response;
   }
 
@@ -243,6 +283,8 @@ export class RideMapper
   // a corrupted ride.
   private stepToDomain(record: RideRecord): RideStep {
     switch (record.status) {
+      case RideStatus.estimated:
+        return { status: RideStatus.estimated };
       case RideStatus.searchingDriver:
         return { status: RideStatus.searchingDriver };
       case RideStatus.noDriverFound:

@@ -4,14 +4,22 @@ import { RideMapper } from './ride.mapper';
 import { RideRepository } from './database/ride.repository';
 import {
   DRIVER_LOCATOR,
+  PUBLIC_HOLIDAYS,
   RIDE_REALTIME,
   RIDE_REPOSITORY,
+  ROUTE_PLANNER,
+  TERRITORY,
 } from './ride.di-tokens';
 import { FirebaseDriverLocatorAdapter } from './infrastructure/firebase-driver-locator.adapter';
 import { FirebaseRideRealtimeAdapter } from './infrastructure/firebase-ride-realtime.adapter';
+import { MapboxRoutePlannerAdapter } from './infrastructure/mapbox-route-planner.adapter';
+import { GeoApiTerritoryAdapter } from './infrastructure/geo-api-territory.adapter';
+import { CalendrierApiPublicHolidaysAdapter } from './infrastructure/calendrier-api-public-holidays.adapter';
 import { RideDispatcher } from './application/ride-dispatcher';
 import { RideOfferTimer } from './application/ride-offer-timer';
 import { RidePublisher } from './application/ride-publisher';
+import { EstimateRideHttpController } from './commands/estimate-ride/estimate-ride.http.controller';
+import { EstimateRideService } from './commands/estimate-ride/estimate-ride.service';
 import { RequestRideHttpController } from './commands/request-ride/request-ride.http.controller';
 import { RequestRideService } from './commands/request-ride/request-ride.service';
 import { AcceptRideOfferHttpController } from './commands/accept-ride-offer/accept-ride-offer.http.controller';
@@ -35,6 +43,7 @@ import { GetBoardingCodeHttpController } from './queries/get-boarding-code/get-b
 import { GetBoardingCodeQueryHandler } from './queries/get-boarding-code/get-boarding-code.query-handler';
 
 const httpControllers = [
+  EstimateRideHttpController,
   RequestRideHttpController,
   AcceptRideOfferHttpController,
   DeclineRideOfferHttpController,
@@ -48,6 +57,7 @@ const httpControllers = [
 ];
 
 const commandHandlers: Provider[] = [
+  EstimateRideService,
   RequestRideService,
   AcceptRideOfferService,
   DeclineRideOfferService,
@@ -77,6 +87,9 @@ const repositories: Provider[] = [
 const adapters: Provider[] = [
   { provide: DRIVER_LOCATOR, useClass: FirebaseDriverLocatorAdapter },
   { provide: RIDE_REALTIME, useClass: FirebaseRideRealtimeAdapter },
+  { provide: ROUTE_PLANNER, useClass: MapboxRoutePlannerAdapter },
+  { provide: TERRITORY, useClass: GeoApiTerritoryAdapter },
+  { provide: PUBLIC_HOLIDAYS, useClass: CalendrierApiPublicHolidaysAdapter },
 ];
 
 @Module({

@@ -1,5 +1,7 @@
-// Where a ride is in its life, from the request to its end.
+// Where a ride is in its life, from the estimate to its end.
 export enum RideStatus {
+  // The price is shown to the passenger, the ride is not ordered yet.
+  estimated = 'ESTIMATED',
   searchingDriver = 'SEARCHING_DRIVER',
   noDriverFound = 'NO_DRIVER_FOUND',
   driverEnRoute = 'DRIVER_EN_ROUTE',
@@ -38,6 +40,7 @@ export interface RideCompletion {
 // impossible combination (no driver found, but a boarding code) cannot be
 // written. The steps after the acceptance belong to the accepted offer.
 export type RideStep =
+  | { status: RideStatus.estimated }
   | { status: RideStatus.searchingDriver }
   | { status: RideStatus.noDriverFound; noDriverFoundAt: Date }
   | { status: RideStatus.driverEnRoute; boardingCode: BoardingCode }
@@ -125,21 +128,66 @@ export interface EstimatedPrice {
   maxCents: number;
 }
 
+// The public holidays calendar of a département: Alsace-Moselle has 2 more.
+export enum HolidayZone {
+  metropole = 'METROPOLE',
+  alsaceMoselle = 'ALSACE_MOSELLE',
+}
+
+// The taxi tariffs of a département from a date on, from its prefectural
+// arrêté.
+export interface TaxiTariff {
+  id: string;
+  departmentCode: string;
+  validFrom: Date;
+  decree: string;
+  pickupCents: number;
+  // A by day, B by night, the taxi returning with a passenger; C by day, D
+  // by night, the taxi returning empty.
+  kmCents: { a: number; b: number; c: number; d: number };
+  // Charged instead of the km price while the taxi is slow or stopped.
+  hourlyCents: number;
+  minimumFareCents: number;
+  // Minutes since midnight, in French time. The night tariffs also apply all
+  // day on Sundays and public holidays.
+  nightStartMinute: number;
+  nightEndMinute: number;
+  holidayZone: HolidayZone;
+}
+
+// A stretch of road between two points of the route, timed with the traffic.
+export interface RouteSegment {
+  meters: number;
+  seconds: number;
+}
+
+// The road of the closest free taxi to the pickup, then to the destination.
+export interface TaxiRoute {
+  approach: RouteSegment[];
+  trip: RouteSegment[];
+}
+
 export interface RideProps {
   passengerId: string;
   origin: RidePickup;
   destination: RidePlace;
   estimatedPrice: EstimatedPrice;
+  // The tariffs the estimate was computed with, as proof.
+  tariffId: string;
   step: RideStep;
   // In the order they were made.
   offers: RideOffer[];
 }
 
-export interface CreateRideProps {
+export interface EstimateRideProps {
   passengerId: string;
   origin: RidePickup;
   destination: RidePlace;
-  estimatedPrice: EstimatedPrice;
+  tariff: TaxiTariff;
+  route: TaxiRoute;
+  // Days as "YYYY-MM-DD", in the département's calendar.
+  publicHolidays: Set<string>;
+  now: Date;
 }
 
 // A driver online around the pickup, as the realtime database sees them.

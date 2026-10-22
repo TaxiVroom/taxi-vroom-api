@@ -101,6 +101,41 @@ export class NoShowTooEarlyError extends ExceptionBase {
   }
 }
 
+// No tariffs are known for the département of the pickup: the app does not
+// work there yet.
+export class RideAreaNotServedError extends ExceptionBase {
+  static readonly message = 'Rides are not available in this area yet';
+
+  readonly code = 'RIDE.AREA_NOT_SERVED';
+
+  constructor(cause?: Error, metadata?: unknown) {
+    super(RideAreaNotServedError.message, cause, metadata);
+  }
+}
+
+// No free taxi within reach: the price cannot include its approach.
+export class NoDriverAvailableError extends ExceptionBase {
+  static readonly message = 'No taxi is available around the pickup';
+
+  readonly code = 'RIDE.NO_DRIVER_AVAILABLE';
+
+  constructor(cause?: Error, metadata?: unknown) {
+    super(NoDriverAvailableError.message, cause, metadata);
+  }
+}
+
+// The estimate is too old to be ordered: the taxis moved, the traffic
+// changed.
+export class RideEstimateExpiredError extends ExceptionBase {
+  static readonly message = 'The estimate expired, ask for a new one';
+
+  readonly code = 'RIDE.ESTIMATE_EXPIRED';
+
+  constructor(cause?: Error, metadata?: unknown) {
+    super(RideEstimateExpiredError.message, cause, metadata);
+  }
+}
+
 // Too many wrong codes: the driver calls the passenger, or cancels.
 export class BoardingCodeLockedError extends ExceptionBase {
   static readonly message = 'Too many wrong boarding codes';

@@ -12,6 +12,8 @@ const envSchema = z.object({
   FIREBASE_STORAGE_BUCKET: z.string().min(1),
   // Realtime Database outside the US: the Admin SDK must be given its URL.
   FIREBASE_DATABASE_URL: z.string().url(),
+  // The server's own token, for the routes of the price estimates.
+  MAPBOX_ACCESS_TOKEN: z.string().min(1),
   NODE_ENV: z
     .enum(['development', 'production', 'test'])
     .default('development'),

@@ -42,6 +42,7 @@ export const routesV1 = {
   },
   ride: {
     root: ridesRoot,
+    request: `${ridesRoot}/:rideId/request`,
     accept: `${ridesRoot}/:rideId/accept`,
     decline: `${ridesRoot}/:rideId/decline`,
     arrive: `${ridesRoot}/:rideId/arrive`,

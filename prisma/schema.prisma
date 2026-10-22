@@ -215,8 +215,50 @@ model Wallet {
   @@map("wallets")
 }
 
-/// Where a ride is in its life, from the request to its end.
+/// The public holidays calendar of a département: Alsace-Moselle has 2 more.
+enum HolidayZone {
+  METROPOLE
+  ALSACE_MOSELLE
+}
+
+/// One prefectural arrêté: the taxi tariffs of a département from a date on.
+/// Entered by hand every year (Jan–Feb), when the new arrêté is published.
+model TaxiTariff {
+  id               String      @id
+  /// Text, not a number: "2A"/"2B" (Corsica), "01"-"09" keep their zero, and
+  /// geo.api.gouv.fr returns it as text.
+  departmentCode   String
+  validFrom        DateTime    @db.Date
+  /// The arrêté these tariffs come from, e.g. "Arrêté préfectoral du 26
+  /// janvier 2026".
+  decree           String
+  pickupCents      Int
+  /// Per km: A by day, B by night, the taxi returning with a passenger; C by
+  /// day, D by night, the taxi returning empty.
+  kmCentsA         Int
+  kmCentsB         Int
+  kmCentsC         Int
+  kmCentsD         Int
+  /// Charged instead of the km price while the taxi is slow or stopped.
+  hourlyCents      Int
+  minimumFareCents Int
+  /// Minutes since midnight: the night tariffs apply from the start to the
+  /// end, also all day on Sundays and public holidays.
+  nightStartMinute Int
+  nightEndMinute   Int
+  holidayZone      HolidayZone
+
+  rides Ride[]
+
+  /// The same arrêté cannot be entered twice.
+  @@unique([departmentCode, validFrom])
+  @@map("taxi_tariffs")
+}
+
+/// Where a ride is in its life, from the estimate to its end.
 enum RideStatus {
+  /// The price is shown to the passenger, the ride is not ordered yet.
+  ESTIMATED
   SEARCHING_DRIVER
   NO_DRIVER_FOUND
   DRIVER_EN_ROUTE
@@ -227,9 +269,9 @@ enum RideStatus {
   PASSENGER_NO_SHOW
 }
 
-/// A ride requested by a passenger. `status` tells which sub-table holds the
-/// details of its current step: the database does not check that they
-/// match, RideEntity does.
+/// A ride estimated for a passenger, then maybe ordered. `status` tells which
+/// sub-table holds the details of its current step: the database does not
+/// check that they match, RideEntity does.
 model Ride {
   id                     String     @id
   passengerId            String
@@ -245,10 +287,14 @@ model Ride {
   /// meter, the real price is only known on arrival.
   estimatedPriceMinCents Int
   estimatedPriceMaxCents Int
+  /// The tariffs the estimate was computed with, as proof.
+  tariffId               String
+  /// When the estimate was made.
   createdAt              DateTime   @default(now())
   updatedAt              DateTime   @updatedAt
 
   passenger     Passenger          @relation(fields: [passengerId], references: [userId], onDelete: Cascade)
+  tariff        TaxiTariff         @relation(fields: [tariffId], references: [id])
   offers        RideOffer[]
   noDriverFound RideNoDriverFound?
   cancellation  RideCancellation?

@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
-  IsInt,
   IsNumber,
   IsString,
   Max,
@@ -9,7 +8,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-export class RequestRideRequestDto {
+export class EstimateRideRequestDto {
   @ApiProperty({ example: 48.5734 })
   @Max(90)
   @Min(-90)
@@ -39,15 +38,4 @@ export class RequestRideRequestDto {
   @Min(-180)
   @IsNumber()
   readonly destinationLongitude: number;
-
-  // The estimate shown to the passenger: the real price comes from the meter.
-  @ApiProperty({ example: 700 })
-  @Min(0)
-  @IsInt()
-  readonly estimatedPriceMinCents: number;
-
-  @ApiProperty({ example: 900 })
-  @Min(0)
-  @IsInt()
-  readonly estimatedPriceMaxCents: number;
 }

@@ -5,7 +5,9 @@ import { distanceBetween } from 'geofire-common';
 import { Err, None, Ok, Option, Result, Some } from 'oxide.ts';
 import {
   BoardingCodeLockedError,
+  NoDriverAvailableError,
   NoShowTooEarlyError,
+  RideEstimateExpiredError,
   RideNotAssignedToDriverError,
   RideNotOwnedByPassengerError,
   RideNotSearchingDriverError,
@@ -16,17 +18,19 @@ import {
 } from './ride.errors';
 import {
   AcceptedRideOffer,
-  CreateRideProps,
   DriverCandidate,
+  EstimateRideProps,
   ExpiredRideOffer,
   PendingRideOffer,
   RideCompletion,
   RideOffer,
   RideOfferStatus,
+  RidePickup,
   RideProps,
   RideStatus,
   RideSupplement,
 } from './ride.types';
+import { estimateFare } from './taxi-fare';
 
 export class RideEntity extends AggregateRoot<RideProps> {
   protected readonly _id: AggregateID;
@@ -38,15 +42,36 @@ export class RideEntity extends AggregateRoot<RideProps> {
   // The time a driver has to answer an offer.
   static readonly offerResponseTimeMs = 15_000;
 
-  static request(props: CreateRideProps): RideEntity {
+  // Uber's way: an estimate can be ordered for a few minutes, then the taxis
+  // moved and the traffic changed.
+  static readonly estimateValidityMs = 5 * 60_000;
+
+  // The price shown before ordering, computed from the closest free taxi:
+  // nobody is told about the ride yet.
+  static estimate(props: EstimateRideProps): RideEntity {
+    const { tariff, route, publicHolidays, now } = props;
     return new RideEntity({
       id: randomUUID(),
+      createdAt: now,
       props: {
-        ...props,
-        step: { status: RideStatus.searchingDriver },
+        passengerId: props.passengerId,
+        origin: props.origin,
+        destination: props.destination,
+        estimatedPrice: estimateFare(tariff, route, now, publicHolidays),
+        tariffId: tariff.id,
+        step: { status: RideStatus.estimated },
         offers: [],
       },
     });
+  }
+
+  // The taxi that would come, whose approach is part of the price.
+  static approachingDriver(
+    pickup: RidePickup,
+    candidates: DriverCandidate[],
+  ): Result<DriverCandidate, NoDriverAvailableError> {
+    const driver = RideEntity.closestFreeDriver(pickup, candidates);
+    return driver ? Ok(driver) : Err(new NoDriverAvailableError());
   }
 
   // Uber's limit: then the driver calls the passenger, or cancels.
@@ -114,6 +139,28 @@ export class RideEntity extends AggregateRoot<RideProps> {
       (offer): offer is PendingRideOffer =>
         offer.status === RideOfferStatus.pending,
     );
+  }
+
+  // "Commander": the passenger orders the estimated ride, at its price.
+  request(
+    passengerId: string,
+    now: Date,
+  ): Result<
+    void,
+    RideNotOwnedByPassengerError | RideWrongStepError | RideEstimateExpiredError
+  > {
+    if (this.props.passengerId !== passengerId) {
+      return Err(new RideNotOwnedByPassengerError());
+    }
+    if (this.status !== RideStatus.estimated) {
+      return Err(new RideWrongStepError());
+    }
+    const ageMs = now.getTime() - this.createdAt.getTime();
+    if (ageMs > RideEntity.estimateValidityMs) {
+      return Err(new RideEstimateExpiredError());
+    }
+    this.props.step = { status: RideStatus.searchingDriver };
+    return Ok(undefined);
   }
 
   // Proposes the ride to the closest free driver within reach who was not
@@ -380,6 +427,9 @@ export class RideEntity extends AggregateRoot<RideProps> {
     if (pending.length > 1) {
       throw new ArgumentInvalidException('Ride: one pending offer at most');
     }
+    if (this.status === RideStatus.estimated && offers.length > 0) {
+      throw new ArgumentInvalidException('Ride: no offer before the order');
+    }
     if (pending.length === 1 && this.status !== RideStatus.searchingDriver) {
       throw new ArgumentInvalidException(
         'Ride: a pending offer only while searching a driver',
@@ -404,18 +454,30 @@ export class RideEntity extends AggregateRoot<RideProps> {
     candidates: DriverCandidate[],
   ): string | undefined {
     const alreadyAsked = new Set(this.props.offers.map((o) => o.driverId));
-    return candidates
-      .filter((c) => !c.isBusy && !alreadyAsked.has(c.driverId))
-      .map((c) => ({ driverId: c.driverId, meters: this.metersToPickup(c) }))
-      .filter((c) => c.meters <= RideEntity.reachableRadiusMeters)
-      .sort((a, b) => a.meters - b.meters)[0]?.driverId;
+    return RideEntity.closestFreeDriver(
+      this.props.origin,
+      candidates.filter((c) => !alreadyAsked.has(c.driverId)),
+    )?.driverId;
   }
 
-  private metersToPickup(candidate: DriverCandidate): number {
-    const { latitude, longitude } = this.props.origin;
+  private static closestFreeDriver(
+    pickup: RidePickup,
+    candidates: DriverCandidate[],
+  ): DriverCandidate | undefined {
+    return candidates
+      .filter((c) => !c.isBusy)
+      .map((c) => ({ candidate: c, meters: RideEntity.metersTo(pickup, c) }))
+      .filter((c) => c.meters <= RideEntity.reachableRadiusMeters)
+      .sort((a, b) => a.meters - b.meters)[0]?.candidate;
+  }
+
+  private static metersTo(
+    pickup: RidePickup,
+    candidate: DriverCandidate,
+  ): number {
     const kilometers = distanceBetween(
       [candidate.latitude, candidate.longitude],
-      [latitude, longitude],
+      [pickup.latitude, pickup.longitude],
     );
     return kilometers * 1000;
   }
