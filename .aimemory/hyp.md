@@ -1,7 +1,7 @@
 #H id|status|claim|evidence
 alsaceHolidaysNight|open|The 2 Alsace-only public holidays count for the night tariff in Bas-Rhin|assumed by zone alsace-moselle; to ask the Bas-Rhin DDPP
 fareRangeNarrowing|open|Knowing when tariff C applies would shrink the range to one tariff plus a traffic margin|needs the exact rule of the arrêté du 26 janvier 2026 and the driver's commune de rattachement (not stored); user chose to leave it for now, 2026-10-22
-usersRoutesUnprotected|open|GET /users and DELETE /users/:id are open to any valid Firebase token|no @Roles and no @Public in the user controllers, global guards only check the token; read 2026-11-02, not exploited
+usersRoutesUnprotected|open|GET /users and DELETE /users/:id are open to any valid Firebase token|no @Roles and no @Public in the user controllers, global guards only check the token; read 2026-11-02, not exploited; same for the admin validate route. User postponed the fix 2026-11-02: do not bring it up again, except before a public repo or a production release
 createUserDead|open|POST /users, the CLI and the message controller have no handler|CreateUserService is commented out in user.module.ts; users only come from RegistrationCompleted
 suspensionNotEnforced|open|A suspended driver can still get rides|Driver.isSuspended and DriverSuspensionEvent are read and written nowhere in src
 documentReviewUnfinished|open|An admin cannot reject a document, and reviews leave no trace|markAsRejected and requireCorrections have no caller, no reject route; the validation and rejection event tables are never written; admins table never filled
