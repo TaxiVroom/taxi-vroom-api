@@ -4,6 +4,7 @@ import { CreateUserHttpController } from './commands/create-user/create-user.htt
 import { DeleteUserHttpController } from './commands/delete-user/delete-user.http-controller';
 import { CreateUserCliController } from './commands/create-user/create-user.cli.controller';
 import { FindUsersHttpController } from './queries/find-users/find-users.http.controller';
+import { GetMeHttpController } from './queries/get-me/get-me.http.controller';
 import { CreateUserMessageController } from './commands/create-user/create-user.message.controller';
 import { CreateUserGraphqlResolver } from './commands/create-user/graphql-example/create-user.graphql-resolver';
 // import { CreateUserService } from './commands/create-user/create-user.service';
@@ -19,6 +20,7 @@ const httpControllers = [
   CreateUserHttpController,
   DeleteUserHttpController,
   FindUsersHttpController,
+  GetMeHttpController,
 ];
 
 const messageControllers = [CreateUserMessageController];

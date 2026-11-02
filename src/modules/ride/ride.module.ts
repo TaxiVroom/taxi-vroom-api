@@ -43,6 +43,9 @@ import { ReportNoShowHttpController } from './commands/report-no-show/report-no-
 import { ReportNoShowService } from './commands/report-no-show/report-no-show.service';
 import { RateRideHttpController } from './commands/rate-ride/rate-ride.http.controller';
 import { RateRideService } from './commands/rate-ride/rate-ride.service';
+import { FindCurrentRideHttpController } from './queries/find-current-ride/find-current-ride.http.controller';
+import { FindCurrentRideQueryHandler } from './queries/find-current-ride/find-current-ride.query-handler';
+import { RideNotifier } from './application/ride-notifier';
 import { FindMyRidesHttpController } from './queries/find-my-rides/find-my-rides.http.controller';
 import { FindMyRidesQueryHandler } from './queries/find-my-rides/find-my-rides.query-handler';
 import { GetBoardingCodeHttpController } from './queries/get-boarding-code/get-boarding-code.http.controller';
@@ -60,6 +63,7 @@ const httpControllers = [
   WithdrawFromRideHttpController,
   ReportNoShowHttpController,
   RateRideHttpController,
+  FindCurrentRideHttpController,
   FindMyRidesHttpController,
   GetBoardingCodeHttpController,
 ];
@@ -80,6 +84,7 @@ const commandHandlers: Provider[] = [
 ];
 
 const queryHandlers: Provider[] = [
+  FindCurrentRideQueryHandler,
   FindMyRidesQueryHandler,
   GetBoardingCodeQueryHandler,
 ];
@@ -88,6 +93,7 @@ const applicationServices: Provider[] = [
   RideDispatcher,
   RideOfferTimer,
   RidePublisher,
+  RideNotifier,
 ];
 
 const mappers: Provider[] = [RideMapper];

@@ -20,6 +20,7 @@ export const routesV1 = {
   user: {
     root: usersRoot,
     delete: `/${usersRoot}/:id`,
+    me: 'me',
   },
   wallet: {
     root: walletsRoot,
@@ -37,11 +38,15 @@ export const routesV1 = {
   passenger: {
     root: passengersRoot,
   },
+  notification: {
+    pushRegistration: 'me/push-registration',
+  },
   admin: {
     validateRegistrationDocument: `${adminRoot}/registration-documents/:documentId/validate`,
   },
   ride: {
     root: ridesRoot,
+    current: `${ridesRoot}/current`,
     request: `${ridesRoot}/:rideId/request`,
     accept: `${ridesRoot}/:rideId/accept`,
     decline: `${ridesRoot}/:rideId/decline`,

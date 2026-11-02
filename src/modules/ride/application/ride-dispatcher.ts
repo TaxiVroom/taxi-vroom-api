@@ -5,6 +5,7 @@ import { DriverCandidate } from '@modules/ride/domain/ride.types';
 import { RideRepositoryPort } from '@modules/ride/database/ride.repository.port';
 import { DRIVER_LOCATOR, RIDE_REPOSITORY } from '@modules/ride/ride.di-tokens';
 import { DriverLocatorPort, OnlineDriver } from './ports/driver-locator.port';
+import { RideNotifier } from './ride-notifier';
 import { RideOfferTimer } from './ride-offer-timer';
 import { RidePublisher } from './ride-publisher';
 
@@ -22,6 +23,7 @@ export class RideDispatcher {
     @Inject(DRIVER_LOCATOR) private readonly driverLocator: DriverLocatorPort,
     private readonly publisher: RidePublisher,
     private readonly offerTimer: RideOfferTimer,
+    private readonly notifier: RideNotifier,
   ) {}
 
   async offerToNextDriver(ride: RideEntity): Promise<void> {
@@ -80,9 +82,11 @@ export class RideDispatcher {
     if (!offer) {
       // Nobody left: the passenger learns no driver is available.
       await this.publisher.publishRide(ride);
+      await this.notifier.noDriverFound(ride);
       return;
     }
     await this.publisher.publishOffer(ride, offer);
     this.offerTimer.start(ride.id, offer.id);
+    await this.notifier.offerToDriver(ride, offer);
   }
 }

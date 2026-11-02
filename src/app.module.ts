@@ -17,6 +17,7 @@ import { PassengerModule } from '@modules/passenger/passenger.module';
 import { DriverModule } from '@modules/driver/driver.module';
 import { AdminModule } from '@modules/admin/admin.module';
 import { RideModule } from '@modules/ride/ride.module';
+import { NotificationModule } from '@modules/notification/notification.module';
 import { validateEnv } from '@config/env.validation';
 
 const interceptors = [
@@ -50,6 +51,7 @@ const interceptors = [
     DriverModule,
     AdminModule,
     RideModule,
+    NotificationModule,
     PrismaModule,
   ],
   controllers: [],

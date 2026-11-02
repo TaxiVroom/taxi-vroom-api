@@ -9,6 +9,7 @@ import {
 } from '@modules/ride/domain/ride.errors';
 import { RideRepositoryPort } from '@modules/ride/database/ride.repository.port';
 import { RIDE_REPOSITORY } from '@modules/ride/ride.di-tokens';
+import { RideNotifier } from '@modules/ride/application/ride-notifier';
 import { RidePublisher } from '@modules/ride/application/ride-publisher';
 import { ArriveAtPickupCommand } from './arrive-at-pickup.command';
 
@@ -22,6 +23,7 @@ export class ArriveAtPickupService implements ICommandHandler {
   constructor(
     @Inject(RIDE_REPOSITORY) private readonly rideRepo: RideRepositoryPort,
     private readonly publisher: RidePublisher,
+    private readonly notifier: RideNotifier,
   ) {}
 
   async execute(
@@ -31,7 +33,9 @@ export class ArriveAtPickupService implements ICommandHandler {
     if (result.isErr()) return Err(result.unwrapErr());
 
     // The passenger sees their taxi arrived.
-    await this.publisher.publishRide(result.unwrap());
+    const ride = result.unwrap();
+    await this.publisher.publishRide(ride);
+    await this.notifier.driverArrived(ride);
     return Ok(undefined);
   }
 

@@ -11,6 +11,7 @@ import { RideRepositoryPort } from '@modules/ride/database/ride.repository.port'
 import { RIDE_REALTIME, RIDE_REPOSITORY } from '@modules/ride/ride.di-tokens';
 import { RideRealtimePort } from '@modules/ride/application/ports/ride-realtime.port';
 import { RideDispatcher } from '@modules/ride/application/ride-dispatcher';
+import { RideNotifier } from '@modules/ride/application/ride-notifier';
 import { RidePublisher } from '@modules/ride/application/ride-publisher';
 import { WithdrawFromRideCommand } from './withdraw-from-ride.command';
 
@@ -26,6 +27,7 @@ export class WithdrawFromRideService implements ICommandHandler {
     @Inject(RIDE_REALTIME) private readonly realtime: RideRealtimePort,
     private readonly publisher: RidePublisher,
     private readonly dispatcher: RideDispatcher,
+    private readonly notifier: RideNotifier,
   ) {}
 
   async execute(
@@ -40,6 +42,7 @@ export class WithdrawFromRideService implements ICommandHandler {
     await this.realtime.markDriverAvailable(command.driverId);
     // The passenger sees a driver searched again.
     await this.publisher.publishRide(ride);
+    await this.notifier.driverWithdrew(ride);
     await this.dispatcher.offerToNextDriver(ride);
     return Ok(undefined);
   }

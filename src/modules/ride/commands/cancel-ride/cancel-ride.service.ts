@@ -11,6 +11,7 @@ import { PendingRideOffer } from '@modules/ride/domain/ride.types';
 import { RideRepositoryPort } from '@modules/ride/database/ride.repository.port';
 import { RIDE_REALTIME, RIDE_REPOSITORY } from '@modules/ride/ride.di-tokens';
 import { RideRealtimePort } from '@modules/ride/application/ports/ride-realtime.port';
+import { RideNotifier } from '@modules/ride/application/ride-notifier';
 import { RideOfferTimer } from '@modules/ride/application/ride-offer-timer';
 import { RidePublisher } from '@modules/ride/application/ride-publisher';
 import { CancelRideCommand } from './cancel-ride.command';
@@ -34,6 +35,7 @@ export class CancelRideService implements ICommandHandler {
     @Inject(RIDE_REALTIME) private readonly realtime: RideRealtimePort,
     private readonly publisher: RidePublisher,
     private readonly offerTimer: RideOfferTimer,
+    private readonly notifier: RideNotifier,
   ) {}
 
   async execute(
@@ -51,6 +53,8 @@ export class CancelRideService implements ICommandHandler {
     // The driver who had the ride is free again.
     if (driverId) await this.realtime.markDriverAvailable(driverId);
     await this.publisher.publishRide(ride);
+    const toldDriverId = driverId ?? pendingOffer?.driverId;
+    if (toldDriverId) await this.notifier.driverCancelled(toldDriverId);
     return Ok(undefined);
   }
 
