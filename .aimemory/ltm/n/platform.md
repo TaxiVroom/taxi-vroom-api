@@ -20,6 +20,6 @@ RolesGuard does one user query per protected request
 transaction: the tx client lives in the request context, repositories read it through this.client
 events: emitAsync is awaited, so handlers run inside the caller's flow
 data model: users + passengers, drivers, admins (1-1); Registration + PassengerRegistration, DriverRegistration; RegistrationDocument + validation and rejection events; Document; DriverSuspensionEvent; Wallet
-ride model: rides + cancellation, no_driver_found; ride_offers + acceptance, decline, expiration; acceptance + boarding_code, arrival, withdrawal; arrival + start, no_show; start + completion + supplements
+ride model: rides + cancellation, no_driver_found; ride_offers + acceptance, decline, expiration; acceptance + boarding_code, arrival, withdrawal; arrival + start, no_show; start + completion + supplements, rating
 status columns select the sub-table; the database does not check they match, RideEntity does
 template leftovers from the starter project: tests/, graphql-example, ARCHITECTURE-GUIDE.md, Address value object, commented-out user methods, .spec files

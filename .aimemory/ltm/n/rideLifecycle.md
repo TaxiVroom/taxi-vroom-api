@@ -24,6 +24,9 @@ accept: 4-digit code from randomInt, stored in plaintext in ride_boarding_codes,
 boarding code in plaintext is deliberate: the earlier hashed design was dropped, the code never goes through Firebase, only the API gives it to the passenger
 start: only from DRIVER_ARRIVED; a wrong code is counted and saved even though the call fails; locked at 5, then the driver calls the passenger or withdraws
 complete: driver sends meterCents (legal price, typed from the taxi meter) and supplements; totalCents = meter + supplements; payment happens on board, outside the app
+rating: passenger only, once, on a COMPLETED ride; spec docs/specs/notation-et-historique.md; a ride without rating has no row in ride_ratings; RideEntity.unnamedPickup is the text when the address is not found
+driver stats (average of all ratings, completed rides) are queried at each publication, never stored
+updatedAt does not move on save: the upsert writes entity.updatedAt back
 driver state: markDriverBusy on accept; markDriverAvailable on cancel, withdraw, no-show and complete
 validate(): one pending offer at most, none before ordering, pending only while searching, exactly one accepted offer while a driver has the ride
 writes go through a repository transaction, then Firebase publish happens after commit, outside the transaction

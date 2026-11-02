@@ -11,8 +11,12 @@ TaxiFare|mod|src/modules/ride/domain/taxi-fare.ts|estimateFare, isTariffOutdated
 RideDispatcher|svc|src/modules/ride/application/ride-dispatcher.ts|offers to the next closest driver, 3 attempts on a race
 RideOfferTimer|svc|src/modules/ride/application/ride-offer-timer.ts|15 s, in memory only
 RidePublisher|svc|src/modules/ride/application/ride-publisher.ts|writes rides/ and rideOffers/ after commit
+RideNotifier|svc|src/modules/ride/application/ride-notifier.ts|the ride's pushes, through SendPushCommand, which never fails
+Notification|mod|src/modules/notification|push_registrations, one phone per user, FCM adapter, token deleted when FCM says it is gone
 RideRealtime|svc|src/modules/ride/infrastructure/firebase-ride-realtime.adapter.ts|RideRealtimePort @ltm:realtime
 DriverLocator|svc|src/modules/ride/infrastructure/firebase-driver-locator.adapter.ts|geohash queries on drivers/
+AddressFinder|svc|src/modules/ride/infrastructure/geoplateforme-address-finder.adapter.ts|reverse geocoding at the estimate, 2 s timeout, None on failure
+FindMyRides|uc|src/modules/ride/queries/find-my-rides/find-my-rides.query-handler.ts|passenger's completed rides, latest first
 RegistrationModule|mod|src/modules/registration/|passenger and driver onboarding, documents @ltm:registration
 AdminModule|mod|src/modules/admin/|only validate-registration-document, dispatches registration's command
 UserModule|mod|src/modules/user/|created from RegistrationCompleted; find-users; delete-user
@@ -37,9 +41,9 @@ RideOfferTimer>dispatches ExpireRideOfferCommand>RideModule
 #B key=value
 stack=NestJS+Prisma7+Postgres+CQRS+DDD+FirebaseAdmin(Auth,RTDB,Storage)+MapboxDirections+geo.api.gouv.fr+calendrier.api.gouv.fr
 http=all routes under /v1; GraphQL at /graphql; Swagger at /docs
-routesRide=POST rides (estimate), rides/:id/request, accept, decline, arrive, start, complete, cancel, withdraw, no-show; GET rides/:id/boarding-code
+routesRide=POST rides (estimate), rides/:id/request, accept, decline, arrive, start, complete, cancel, withdraw, no-show, rating; GET rides (passenger's completed rides), GET rides/current (passenger or driver, 404 without one), GET rides/:id/boarding-code
 routesRegistration=GET registration-flows/me (get or create), PATCH me, GET me/email-availability, POST+GET me/documents, GET me/documents/:documentTypeId/url, GET registration-document-types, POST passengers (completes the passenger)
-routesOther=GET+POST users, DELETE users/:id, PATCH admin/registration-documents/:documentId/validate
+routesOther=GET+POST users, DELETE users/:id, GET me, PUT+DELETE me/push-registration, PATCH admin/registration-documents/:documentId/validate
 rideErrors=codes in src/modules/ride/domain/ride.errors.ts; the mobile reads 409 on cancel and accept, 422 on estimate, order and start
 dockerDb=docker compose in docker/: postgres-container on 5432 (db ddh), pgadmin on 5050
 dbRead=docker exec postgres-container sh -c 'psql -U "$POSTGRES_USER" -d ddh -c "..."' reads the dev database without opening .env
