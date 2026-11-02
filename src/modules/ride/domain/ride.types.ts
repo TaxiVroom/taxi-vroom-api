@@ -36,6 +36,20 @@ export interface RideCompletion {
   supplements: RideSupplement[];
 }
 
+// What the passenger can praise when rating a driver.
+export enum RideCompliment {
+  smoothDriving = 'SMOOTH_DRIVING',
+  punctual = 'PUNCTUAL',
+  luggageHelp = 'LUGGAGE_HELP',
+}
+
+// The passenger's rating of the driver, given once after the ride.
+export interface RideRating {
+  stars: number;
+  compliments: RideCompliment[];
+  ratedAt: Date;
+}
+
 // The current step of the ride, with only the data of that step: an
 // impossible combination (no driver found, but a boarding code) cannot be
 // written. The steps after the acceptance belong to the accepted offer.
@@ -55,6 +69,8 @@ export type RideStep =
       arrivedAt: Date;
       startedAt: Date;
       completion: RideCompletion;
+      // Null until the passenger rates the ride, if they do.
+      rating: RideRating | null;
     }
   | { status: RideStatus.cancelled; cancelledAt: Date }
   | { status: RideStatus.passengerNoShow; arrivedAt: Date; reportedAt: Date };
@@ -113,12 +129,14 @@ export interface RidePlace {
   longitude: number;
 }
 
-// Where the passenger is picked up: the passenger's position, unnamed until
-// its address is looked up.
-export interface RidePickup {
-  name: string | null;
+export interface RidePosition {
   latitude: number;
   longitude: number;
+}
+
+// Where the passenger is picked up: their position and its address.
+export interface RidePickup extends RidePosition {
+  name: string;
 }
 
 // The estimate shown to the passenger when ordering: a taxi runs on its

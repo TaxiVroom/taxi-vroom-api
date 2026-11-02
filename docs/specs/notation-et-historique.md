@@ -1,6 +1,6 @@
 # Notation du chauffeur et historique des courses
 
-> Statut : spec validée. Aucun code écrit. L'étape 1 attend le feu vert du user.
+> Statut : terminée. Testée à deux émulateurs par le user. La base ne montre pas de course après le correctif de l'écran de fin : le cas avec supplément est validé par le user, pas par une ligne en base.
 
 Concerne `taxi-vroom-api` et `taxi-vroom-mobile`. Cette spec vit dans l'API, qui porte les règles.
 
@@ -22,7 +22,8 @@ Les deux écrans existent mais tournent sur de fausses données :
 | Note | De 1 à 5 étoiles, entier |
 | Compliments | 0 ou plusieurs, dans une liste fixe : conduite douce, ponctuel, aide bagages |
 | Pas de note | Le passager peut terminer sans noter : rien n'est envoyé, aucune note à 0 |
-| Échec de l'envoi | Ne bloque pas le passager : la course est finie, il revient à l'accueil |
+| Envoi | Indicateur de chargement sur « Terminer » |
+| Échec de l'envoi | Ne bloque pas le passager : il revient à l'accueil avec le message « Votre note n'a pas pu être envoyée. ». La note est perdue, un écran de plus pour un cas rare a été écarté |
 | Note du chauffeur | La moyenne de toutes ses notes depuis le début, arrondie à une décimale à l'affichage |
 | Calcul de la moyenne | Une requête à chaque publication de la course, sans valeur stockée : le passager la voit après l'acceptation, et elle ne change pas pendant la course |
 | Chauffeur sans note | « Nouveau » à la place des étoiles |
@@ -107,11 +108,10 @@ Le mobile remplace alors ces deux valeurs simulées. Le numéro de taxi, la vill
 
 | Table | Opération | Quand |
 |---|---|---|
-| `ride_ratings` | Nouvelle table | `offerId` (clé, liée à `ride_completions`), `stars`, `ratedAt` |
-| `ride_rating_compliments` | Nouvelle table | `offerId`, `compliment` (clé sur les deux) |
+| `ride_ratings` | Nouvelle table | `offerId` (clé, liée à `ride_completions`), `stars`, `compliments` (liste, vide sans compliment), `ratedAt` |
 | `rides` | `originName` obligatoire | Colonne rendue `NOT NULL` |
 
-Une course sans note n'a simplement pas de ligne : aucune colonne nullable, aucune colonne dupliquée. Le lien avec `ride_completions` garantit qu'on ne peut noter qu'une course terminée, comme les autres sous-tables. `SMOOTH_DRIVING`, `PUNCTUAL` et `LUGGAGE_HELP` forment l'enum Prisma `RideCompliment`.
+Une course sans note n'a simplement pas de ligne : aucune colonne nullable, aucune colonne dupliquée. Les compliments sont une liste dans la note, car ils ne se lisent jamais sans elle ; une table à part a été écartée, elle n'apporterait que des statistiques dont on n'a pas besoin. Le lien avec `ride_completions` garantit qu'on ne peut noter qu'une course terminée, comme les autres sous-tables. `SMOOTH_DRIVING`, `PUNCTUAL` et `LUGGAGE_HELP` forment l'enum Prisma `RideCompliment`.
 
 Migration créée par le user. La table `rides` est vidée avant, avec `DELETE FROM rides;` : elle ne contient que des courses de test, et aucune production n'existe. Le `DELETE` retire aussi les offres et les sous-tables en cascade, et garde les comptes, le tarif et les types de documents.
 
@@ -129,62 +129,63 @@ Une étape à la fois, avec une pause et ta validation entre chaque.
 
 ### Étape 1 : notation (API)
 
-- [ ] Ajouter `RideRating`, `RideRatingCompliment` et l'enum `RideCompliment` à `schema.prisma`, relation depuis `RideCompletion`
-- [ ] Rendre `Ride.originName` obligatoire dans `schema.prisma`
-- [ ] À exécuter par le user : `DELETE FROM rides;`
-- [ ] Commandes à lancer par le user : `npm run migration:dev -- --name ride_ratings_and_origin_name`, puis `npm run prisma:generate`
-- [ ] Ajouter `RideAlreadyRatedError`
-- [ ] Ajouter la note à l'étape `completed` de `RideStep` et `RideEntity.rate(passengerId, stars, compliments, now)`
-- [ ] Étendre `ride.mapper.ts` et `RideRepository.save()`, charger la note dans `withSubTables`
-- [ ] Ajouter la commande `rate-ride` : commande, service, contrôleur, DTO
-- [ ] Ajouter la route à `app.routes.ts` et au module
-- [ ] Lancer `npx tsc --noEmit` et `npm run lint`
+- [x] Ajouter `RideRating` et l'enum `RideCompliment` à `schema.prisma`, relation depuis `RideCompletion`
+- [x] Rendre `Ride.originName` obligatoire dans `schema.prisma`
+- [x] À exécuter par le user : `DELETE FROM rides;`
+- [x] Commandes à lancer par le user : `npm run migration:dev -- --name ride_ratings_and_origin_name`, puis `npm run prisma:generate`
+- [x] Estimation : envoyer « Position de départ » au lieu de `null`, en attendant l'adresse de l'étape 2
+- [x] Ajouter `RideAlreadyRatedError`
+- [x] Ajouter la note à l'étape `completed` de `RideStep` et `RideEntity.rate(passengerId, stars, compliments, now)`
+- [x] Étendre `ride.mapper.ts` et `RideRepository.save()`, charger la note dans `withSubTables`
+- [x] Ajouter la commande `rate-ride` : commande, service, contrôleur, DTO
+- [x] Ajouter la route à `app.routes.ts` et au module
+- [x] Lancer `npx tsc --noEmit` et `npm run lint`
 
 ### Étape 2 : adresse de départ et historique (API)
 
-- [ ] Lire la documentation officielle de `geocodage/reverse` (paramètres, limite de 50 requêtes par seconde)
-- [ ] Ajouter `AddressFinderPort` et son adaptateur, avec le texte de secours en cas d'échec
-- [ ] L'appeler dans `EstimateRideService`
-- [ ] Ajouter la requête `find-my-rides` : `query-handler`, contrôleur, DTO de réponse
-- [ ] Ajouter le module et la route `GET /v1/rides`
-- [ ] Lancer `npx tsc --noEmit` et `npm run lint`
+- [x] Lire la documentation officielle de `geocodage/reverse` (paramètres, limite de 50 requêtes par seconde)
+- [x] Ajouter `AddressFinderPort` et son adaptateur, avec le texte de secours en cas d'échec
+- [x] L'appeler dans `EstimateRideService`
+- [x] Ajouter la requête `find-my-rides` : `query-handler`, contrôleur, DTO de réponse
+- [x] Ajouter le module et la route `GET /v1/rides`
+- [x] Lancer `npx tsc --noEmit` et `npm run lint`
 
 ### Étape 3 : note du chauffeur (API)
 
-- [ ] Étendre `findParticipants` : moyenne et nombre de courses terminées
-- [ ] Publier `rating` et `completedRides` dans `rides/<rideId>/driver`
-- [ ] Lancer `npx tsc --noEmit` et `npm run lint`
+- [x] Étendre `findParticipants` : moyenne et nombre de courses terminées
+- [x] Publier `rating` et `completedRides` dans `rides/<rideId>/driver`
+- [x] Lancer `npx tsc --noEmit` et `npm run lint`
 
 ### Étape 4 : notation et note du chauffeur (mobile)
 
-- [ ] Test d'abord : `RateRideUseCase` n'appelle pas l'API avec 0 étoile
-- [ ] Test d'abord : une erreur d'envoi ne bloque pas la fin de la course
-- [ ] Ajouter `RideCompliment` et remplacer les textes de `ride_completed_view.dart`
-- [ ] Ajouter `rateRide` à `RideRemoteDataSourceImpl`, retirer `RideRatingRemoteDataSource`
-- [ ] Lire `rating` et `completedRides` dans `ride_remote_datasource.dart`, garder le reste simulé
-- [ ] Afficher « Nouveau » sans note dans `driver_summary.dart`
-- [ ] Mettre à jour le fake
-- [ ] Lancer `dart format` sur les fichiers touchés, `flutter analyze`, `very_good test`, le lint Bloc
+- [x] Test d'abord : `RateRideUseCase` n'appelle pas l'API avec 0 étoile
+- [x] Test d'abord : une erreur d'envoi ne bloque pas la fin de la course
+- [x] Ajouter `RideCompliment` et remplacer les textes de `ride_completed_view.dart`
+- [x] Ajouter `rateRide` à `RideRemoteDataSourceImpl`, retirer `RideRatingRemoteDataSource`
+- [x] Lire `rating` et `completedRides` dans `ride_remote_datasource.dart`, garder le reste simulé
+- [x] Afficher « Nouveau » sans note dans `driver_summary.dart`
+- [x] Mettre à jour le fake
+- [x] Lancer `dart format` sur les fichiers touchés, `flutter analyze`, `very_good test`, le lint Bloc
 
 ### Étape 5 : historique (mobile)
 
-- [ ] Ajouter `getPastRides` à la vraie source
-- [ ] Dans `RideRepositoryImpl.getRideHistory`, prendre « À venir » du fake et « Passées » de l'API
-- [ ] Retirer `tariff` de `PastRide`, adapter `ride_history_tab.dart`
-- [ ] Afficher la vraie adresse de départ chez le chauffeur, retirer `_unnamedPickup`
-- [ ] Recharger l'historique à la fin d'une course, y compris sans note
-- [ ] Lancer les mêmes vérifications qu'à l'étape 4
+- [x] Ajouter `getPastRides` à la vraie source
+- [x] Dans `RideRepositoryImpl.getRideHistory`, prendre « À venir » du fake et « Passées » de l'API
+- [x] Retirer `tariff` de `PastRide`, adapter `ride_history_tab.dart`
+- [x] Afficher la vraie adresse de départ chez le chauffeur, retirer `_unnamedPickup`
+- [x] Recharger l'historique à la fin d'une course, y compris sans note : déjà fait à l'ouverture de l'onglet
+- [x] Lancer les mêmes vérifications qu'à l'étape 4
 
 ### Étape 6 : test à deux émulateurs (par le user)
 
-- [ ] Estimation : la vraie adresse dans `rides.originName` et sur l'écran du chauffeur
-- [ ] Course complète avec 5 étoiles et 2 compliments : ligne en base, course visible dans « Passées », bon montant
-- [ ] Course suivante avec le même chauffeur : moyenne et nombre de courses à jour
-- [ ] Fin de course sans note : aucune ligne, course visible dans « Passées »
-- [ ] Chauffeur sans note : « Nouveau » affiché
+- [x] Estimation : la vraie adresse dans `rides.originName` et sur l'écran du chauffeur
+- [x] Course complète avec des étoiles et 2 compliments : ligne en base, course visible dans « Passées », bon montant
+- [x] Course suivante avec le même chauffeur : moyenne et nombre de courses à jour (validé par le user)
+- [x] Fin de course sans note : aucune ligne, course visible dans « Passées » (validé par le user)
+- [x] Chauffeur sans note : « Nouveau » affiché
 
 ### Fin de feature
 
-- [ ] Mettre à jour `.aimemory` dans les deux dépôts, retirer la ligne « noCurrentRideRoute » si elle ne s'applique plus qu'à la course en cours
-- [ ] Compresser `done.md`
+- [x] Mettre à jour `.aimemory` dans les deux dépôts, retirer la ligne « noCurrentRideRoute » si elle ne s'applique plus qu'à la course en cours
+- [x] Compresser `done.md`
 - [ ] Commiter les deux dépôts quand le user le demande

@@ -51,6 +51,7 @@ export const routesV1 = {
     cancel: `${ridesRoot}/:rideId/cancel`,
     withdraw: `${ridesRoot}/:rideId/withdraw`,
     noShow: `${ridesRoot}/:rideId/no-show`,
+    rating: `${ridesRoot}/:rideId/rating`,
     boardingCode: `${ridesRoot}/:rideId/boarding-code`,
   },
 };

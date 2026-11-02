@@ -8,18 +8,20 @@ import {
 } from '@modules/ride/domain/ride.errors';
 import {
   DriverCandidate,
-  RidePickup,
+  RidePosition,
   TaxiTariff,
 } from '@modules/ride/domain/ride.types';
 import { isTariffOutdated } from '@modules/ride/domain/taxi-fare';
 import { RideRepositoryPort } from '@modules/ride/database/ride.repository.port';
 import {
+  ADDRESS_FINDER,
   DRIVER_LOCATOR,
   PUBLIC_HOLIDAYS,
   RIDE_REPOSITORY,
   ROUTE_PLANNER,
   TERRITORY,
 } from '@modules/ride/ride.di-tokens';
+import { AddressFinderPort } from '@modules/ride/application/ports/address-finder.port';
 import { DriverLocatorPort } from '@modules/ride/application/ports/driver-locator.port';
 import { PublicHolidaysPort } from '@modules/ride/application/ports/public-holidays.port';
 import { RoutePlannerPort } from '@modules/ride/application/ports/route-planner.port';
@@ -42,6 +44,7 @@ export class EstimateRideService implements ICommandHandler {
   constructor(
     @Inject(RIDE_REPOSITORY) private readonly rideRepo: RideRepositoryPort,
     @Inject(TERRITORY) private readonly territory: TerritoryPort,
+    @Inject(ADDRESS_FINDER) private readonly addressFinder: AddressFinderPort,
     @Inject(DRIVER_LOCATOR) private readonly driverLocator: DriverLocatorPort,
     @Inject(ROUTE_PLANNER) private readonly routePlanner: RoutePlannerPort,
     @Inject(PUBLIC_HOLIDAYS)
@@ -70,14 +73,21 @@ export class EstimateRideService implements ICommandHandler {
     driver: DriverCandidate,
     now: Date,
   ): Promise<RideEstimate> {
-    const route = await this.routePlanner.planTaxiRoute(
-      driver,
-      command.origin,
-      command.destination,
-    );
+    const { latitude, longitude } = command.origin;
+    const [route, address] = await Promise.all([
+      this.routePlanner.planTaxiRoute(
+        driver,
+        command.origin,
+        command.destination,
+      ),
+      this.addressFinder.findAddress(latitude, longitude),
+    ]);
     const ride = RideEntity.estimate({
       passengerId: command.passengerId,
-      origin: command.origin,
+      origin: {
+        ...command.origin,
+        name: address.unwrapOr(RideEntity.unnamedPickup),
+      },
       destination: command.destination,
       tariff,
       route,
@@ -92,7 +102,7 @@ export class EstimateRideService implements ICommandHandler {
   }
 
   private async findTariff(
-    pickup: RidePickup,
+    pickup: RidePosition,
     now: Date,
   ): Promise<Option<TaxiTariff>> {
     const departmentCode = await this.territory.findDepartmentCode(
@@ -104,7 +114,9 @@ export class EstimateRideService implements ICommandHandler {
       : None;
   }
 
-  private async findCandidates(pickup: RidePickup): Promise<DriverCandidate[]> {
+  private async findCandidates(
+    pickup: RidePosition,
+  ): Promise<DriverCandidate[]> {
     const onlineDrivers = await this.driverLocator.findOnlineDriversAround(
       pickup.latitude,
       pickup.longitude,

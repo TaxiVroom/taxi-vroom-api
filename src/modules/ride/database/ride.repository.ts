@@ -16,13 +16,15 @@ import {
 import { RideEntity } from '../domain/ride.entity';
 import {
   HolidayZone,
+  RideCompletion,
   RideOfferStatus,
+  RideRating,
   RideStatus,
   TaxiTariff,
 } from '../domain/ride.types';
 import {
+  RideDriverStats,
   RideParticipants,
-  RidePerson,
   RideRepositoryPort,
 } from './ride.repository.port';
 
@@ -42,7 +44,9 @@ const withSubTables = {
           arrival: {
             include: {
               start: {
-                include: { completion: { include: { supplements: true } } },
+                include: {
+                  completion: { include: { supplements: true, rating: true } },
+                },
               },
               noShow: true,
             },
@@ -143,12 +147,36 @@ export class RideRepository
         passenger: { select: { user: { select: personFields } } },
         offers: {
           where: { status: RideOfferStatus.accepted },
-          select: { driver: { select: { user: { select: personFields } } } },
+          select: {
+            driverId: true,
+            driver: { select: { user: { select: personFields } } },
+          },
         },
       },
     });
-    const driver: RidePerson | undefined = ride.offers[0]?.driver.user;
-    return { passenger: ride.passenger.user, driver: driver ?? null };
+    const offer = ride.offers[0];
+    return {
+      passenger: ride.passenger.user,
+      driver: offer
+        ? { ...offer.driver.user, ...(await this.driverStats(offer.driverId)) }
+        : null,
+    };
+  }
+
+  // Asked each time, not stored: a driver's stats only move between rides,
+  // and a stored copy could go wrong.
+  private async driverStats(driverId: string): Promise<RideDriverStats> {
+    const completion = {
+      start: { arrival: { acceptance: { offer: { driverId } } } },
+    };
+    const [ratings, completedRides] = await Promise.all([
+      this.client.rideRating.aggregate({
+        where: { completion },
+        _avg: { stars: true },
+      }),
+      this.client.rideCompletion.count({ where: completion }),
+    ]);
+    return { rating: ratings._avg.stars, completedRides };
   }
 
   async findTariff(
@@ -262,10 +290,22 @@ export class RideRepository
     }
   }
 
-  // Written once: a completed ride does not change anymore.
   private async saveCompletion(
     offerId: string,
-    { completedAt, meterCents, supplements }: RideCompletionModel,
+    { completedAt, meterCents, supplements, rating }: RideCompletionModel,
+  ): Promise<void> {
+    await this.createCompletionOnce(offerId, {
+      completedAt,
+      meterCents,
+      supplements,
+    });
+    if (rating) await this.createRatingOnce(offerId, rating);
+  }
+
+  // A completed ride does not change anymore.
+  private async createCompletionOnce(
+    offerId: string,
+    { completedAt, meterCents, supplements }: RideCompletion,
   ): Promise<void> {
     const saved = await this.client.rideCompletion.findUnique({
       where: { offerId },
@@ -285,6 +325,18 @@ export class RideRepository
           })),
         },
       },
+    });
+  }
+
+  // A rating is given once, and never changed.
+  private async createRatingOnce(
+    offerId: string,
+    { stars, compliments, ratedAt }: RideRating,
+  ): Promise<void> {
+    await this.client.rideRating.upsert({
+      where: { offerId },
+      create: { offerId, stars, compliments, ratedAt },
+      update: {},
     });
   }
 }

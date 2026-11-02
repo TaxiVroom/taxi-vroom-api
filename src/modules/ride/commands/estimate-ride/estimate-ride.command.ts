@@ -1,9 +1,9 @@
 import { Command, CommandProps } from '@libs/ddd';
-import { RidePickup, RidePlace } from '@modules/ride/domain/ride.types';
+import { RidePlace, RidePosition } from '@modules/ride/domain/ride.types';
 
 export class EstimateRideCommand extends Command {
   readonly passengerId: string;
-  readonly origin: RidePickup;
+  readonly origin: RidePosition;
   readonly destination: RidePlace;
 
   constructor(props: CommandProps<EstimateRideCommand>) {

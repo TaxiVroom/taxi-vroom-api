@@ -7,6 +7,7 @@ import {
   BoardingCodeLockedError,
   NoDriverAvailableError,
   NoShowTooEarlyError,
+  RideAlreadyRatedError,
   RideEstimateExpiredError,
   RideNotAssignedToDriverError,
   RideNotOwnedByPassengerError,
@@ -22,10 +23,11 @@ import {
   EstimateRideProps,
   ExpiredRideOffer,
   PendingRideOffer,
+  RideCompliment,
   RideCompletion,
   RideOffer,
   RideOfferStatus,
-  RidePickup,
+  RidePosition,
   RideProps,
   RideStatus,
   RideSupplement,
@@ -41,6 +43,9 @@ export class RideEntity extends AggregateRoot<RideProps> {
 
   // The time a driver has to answer an offer.
   static readonly offerResponseTimeMs = 15_000;
+
+  // Shown instead of the address when it cannot be found.
+  static readonly unnamedPickup = 'Position de départ';
 
   // Uber's way: an estimate can be ordered for a few minutes, then the taxis
   // moved and the traffic changed.
@@ -67,7 +72,7 @@ export class RideEntity extends AggregateRoot<RideProps> {
 
   // The taxi that would come, whose approach is part of the price.
   static approachingDriver(
-    pickup: RidePickup,
+    pickup: RidePosition,
     candidates: DriverCandidate[],
   ): Result<DriverCandidate, NoDriverAvailableError> {
     const driver = RideEntity.closestFreeDriver(pickup, candidates);
@@ -299,6 +304,33 @@ export class RideEntity extends AggregateRoot<RideProps> {
       ...step,
       status: RideStatus.completed,
       completion: { completedAt: now, meterCents, supplements },
+      rating: null,
+    };
+    return Ok(undefined);
+  }
+
+  // The passenger rates the driver, once, after the ride.
+  rate(
+    passengerId: string,
+    stars: number,
+    compliments: RideCompliment[],
+    now: Date,
+  ): Result<
+    void,
+    RideNotOwnedByPassengerError | RideWrongStepError | RideAlreadyRatedError
+  > {
+    if (this.props.passengerId !== passengerId) {
+      return Err(new RideNotOwnedByPassengerError());
+    }
+    const step = this.props.step;
+    if (step.status !== RideStatus.completed) {
+      return Err(new RideWrongStepError());
+    }
+    if (step.rating) return Err(new RideAlreadyRatedError());
+
+    this.props.step = {
+      ...step,
+      rating: { stars, compliments, ratedAt: now },
     };
     return Ok(undefined);
   }
@@ -461,7 +493,7 @@ export class RideEntity extends AggregateRoot<RideProps> {
   }
 
   private static closestFreeDriver(
-    pickup: RidePickup,
+    pickup: RidePosition,
     candidates: DriverCandidate[],
   ): DriverCandidate | undefined {
     return candidates
@@ -472,7 +504,7 @@ export class RideEntity extends AggregateRoot<RideProps> {
   }
 
   private static metersTo(
-    pickup: RidePickup,
+    pickup: RidePosition,
     candidate: DriverCandidate,
   ): number {
     const kilometers = distanceBetween(

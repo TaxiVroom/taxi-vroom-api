@@ -3,6 +3,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { RideMapper } from './ride.mapper';
 import { RideRepository } from './database/ride.repository';
 import {
+  ADDRESS_FINDER,
   DRIVER_LOCATOR,
   PUBLIC_HOLIDAYS,
   RIDE_REALTIME,
@@ -14,6 +15,7 @@ import { FirebaseDriverLocatorAdapter } from './infrastructure/firebase-driver-l
 import { FirebaseRideRealtimeAdapter } from './infrastructure/firebase-ride-realtime.adapter';
 import { MapboxRoutePlannerAdapter } from './infrastructure/mapbox-route-planner.adapter';
 import { GeoApiTerritoryAdapter } from './infrastructure/geo-api-territory.adapter';
+import { GeoplateformeAddressFinderAdapter } from './infrastructure/geoplateforme-address-finder.adapter';
 import { CalendrierApiPublicHolidaysAdapter } from './infrastructure/calendrier-api-public-holidays.adapter';
 import { RideDispatcher } from './application/ride-dispatcher';
 import { RideOfferTimer } from './application/ride-offer-timer';
@@ -39,6 +41,10 @@ import { WithdrawFromRideHttpController } from './commands/withdraw-from-ride/wi
 import { WithdrawFromRideService } from './commands/withdraw-from-ride/withdraw-from-ride.service';
 import { ReportNoShowHttpController } from './commands/report-no-show/report-no-show.http.controller';
 import { ReportNoShowService } from './commands/report-no-show/report-no-show.service';
+import { RateRideHttpController } from './commands/rate-ride/rate-ride.http.controller';
+import { RateRideService } from './commands/rate-ride/rate-ride.service';
+import { FindMyRidesHttpController } from './queries/find-my-rides/find-my-rides.http.controller';
+import { FindMyRidesQueryHandler } from './queries/find-my-rides/find-my-rides.query-handler';
 import { GetBoardingCodeHttpController } from './queries/get-boarding-code/get-boarding-code.http.controller';
 import { GetBoardingCodeQueryHandler } from './queries/get-boarding-code/get-boarding-code.query-handler';
 
@@ -53,6 +59,8 @@ const httpControllers = [
   CancelRideHttpController,
   WithdrawFromRideHttpController,
   ReportNoShowHttpController,
+  RateRideHttpController,
+  FindMyRidesHttpController,
   GetBoardingCodeHttpController,
 ];
 
@@ -68,9 +76,13 @@ const commandHandlers: Provider[] = [
   CancelRideService,
   WithdrawFromRideService,
   ReportNoShowService,
+  RateRideService,
 ];
 
-const queryHandlers: Provider[] = [GetBoardingCodeQueryHandler];
+const queryHandlers: Provider[] = [
+  FindMyRidesQueryHandler,
+  GetBoardingCodeQueryHandler,
+];
 
 const applicationServices: Provider[] = [
   RideDispatcher,
@@ -89,6 +101,7 @@ const adapters: Provider[] = [
   { provide: RIDE_REALTIME, useClass: FirebaseRideRealtimeAdapter },
   { provide: ROUTE_PLANNER, useClass: MapboxRoutePlannerAdapter },
   { provide: TERRITORY, useClass: GeoApiTerritoryAdapter },
+  { provide: ADDRESS_FINDER, useClass: GeoplateformeAddressFinderAdapter },
   { provide: PUBLIC_HOLIDAYS, useClass: CalendrierApiPublicHolidaysAdapter },
 ];
 

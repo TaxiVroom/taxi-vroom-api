@@ -136,6 +136,17 @@ export class RideEstimateExpiredError extends ExceptionBase {
   }
 }
 
+// A ride is rated once, for good.
+export class RideAlreadyRatedError extends ExceptionBase {
+  static readonly message = 'This ride was already rated';
+
+  readonly code = 'RIDE.ALREADY_RATED';
+
+  constructor(cause?: Error, metadata?: unknown) {
+    super(RideAlreadyRatedError.message, cause, metadata);
+  }
+}
+
 // Too many wrong codes: the driver calls the passenger, or cancels.
 export class BoardingCodeLockedError extends ExceptionBase {
   static readonly message = 'Too many wrong boarding codes';

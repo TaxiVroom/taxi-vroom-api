@@ -1,4 +1,7 @@
-import { RidePerson } from '@modules/ride/database/ride.repository.port';
+import {
+  RideDriver,
+  RidePerson,
+} from '@modules/ride/database/ride.repository.port';
 import {
   EstimatedPrice,
   RideCompletion,
@@ -31,7 +34,7 @@ export interface RideNotice {
   passenger: RidePerson;
   // Once a driver accepted the ride.
   driverId: string | null;
-  driver: RidePerson | null;
+  driver: RideDriver | null;
   // Once the ride ended: the passenger's receipt.
   completion: RideReceipt | null;
 }

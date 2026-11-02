@@ -50,9 +50,7 @@ export class EstimateRideHttpController {
       await this.commandBus.execute(
         new EstimateRideCommand({
           passengerId: user.id,
-          // The pickup address is not looked up yet.
           origin: {
-            name: null,
             latitude: body.originLatitude,
             longitude: body.originLongitude,
           },

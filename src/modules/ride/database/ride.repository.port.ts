@@ -9,11 +9,19 @@ export interface RidePerson {
   phone: string;
 }
 
+export interface RideDriverStats {
+  // The average of all their ratings, null until they get one.
+  rating: number | null;
+  completedRides: number;
+}
+
+export interface RideDriver extends RidePerson, RideDriverStats {}
+
 // Who takes part in a ride, to tell each one about the other.
 export interface RideParticipants {
   passenger: RidePerson;
   // Once a driver accepted the ride.
-  driver: RidePerson | null;
+  driver: RideDriver | null;
 }
 
 export interface RideRepositoryPort extends RepositoryPort<RideEntity> {

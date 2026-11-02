@@ -5,6 +5,7 @@ import {
   RideOffer,
   RideOfferStatus,
   RideProps,
+  RideRating,
   RideStatus,
   RideStep,
   RideSupplement,
@@ -20,7 +21,7 @@ export type RideModel = {
   id: string;
   passengerId: string;
   status: RideStatus;
-  originName: string | null;
+  originName: string;
   originLatitude: number;
   originLongitude: number;
   destinationName: string;
@@ -37,6 +38,7 @@ export type RideCompletionModel = {
   completedAt: Date;
   meterCents: number;
   supplements: RideSupplement[];
+  rating: RideRating | null;
 };
 
 export type RideArrivalModel = {
@@ -255,7 +257,7 @@ export class RideMapper
           ...acceptance,
           arrival: this.arrival(step.arrivedAt, {
             startedAt: step.startedAt,
-            completion: step.completion,
+            completion: { ...step.completion, rating: step.rating },
           }),
         };
       case RideStatus.passengerNoShow:
@@ -316,11 +318,13 @@ export class RideMapper
       case RideStatus.completed: {
         const arrival = this.required(this.acceptance(record).arrival);
         const start = this.required(arrival.start);
+        const { rating, ...completion } = this.required(start.completion);
         return {
           status: RideStatus.completed,
           arrivedAt: arrival.arrivedAt,
           startedAt: start.startedAt,
-          completion: this.required(start.completion),
+          completion,
+          rating,
         };
       }
       case RideStatus.cancelled:

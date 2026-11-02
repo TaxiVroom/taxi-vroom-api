@@ -46,6 +46,7 @@ model User {
   driver    Driver?
   admin     Admin?
 
+
   @@map("users")
 }
 
@@ -276,8 +277,8 @@ model Ride {
   id                     String     @id
   passengerId            String
   status                 RideStatus
-  /// Null until the pickup address is looked up: the passenger's position.
-  originName             String?
+  /// The address of the passenger's position, looked up at the estimate.
+  originName             String
   originLatitude         Float
   originLongitude        Float
   destinationName        String
@@ -372,8 +373,31 @@ model RideCompletion {
 
   start       RideStart                  @relation(fields: [offerId], references: [offerId], onDelete: Cascade)
   supplements RideCompletionSupplement[]
+  rating      RideRating?
 
   @@map("ride_completions")
+}
+
+/// What the passenger can praise when rating a driver.
+enum RideCompliment {
+  SMOOTH_DRIVING
+  PUNCTUAL
+  LUGGAGE_HELP
+}
+
+/// The passenger's rating of the driver, once: a ride without one has no row.
+/// Only possible after the ride's completion.
+model RideRating {
+  offerId     String           @id
+  /// From 1 to 5.
+  stars       Int
+  /// None is an empty list.
+  compliments RideCompliment[]
+  ratedAt     DateTime
+
+  completion RideCompletion @relation(fields: [offerId], references: [offerId], onDelete: Cascade)
+
+  @@map("ride_ratings")
 }
 
 /// A supplement the driver added at the end of the ride, e.g. 2 bulky
