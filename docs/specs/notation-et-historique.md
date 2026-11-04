@@ -188,4 +188,4 @@ Une étape à la fois, avec une pause et ta validation entre chaque.
 
 - [x] Mettre à jour `.aimemory` dans les deux dépôts, retirer la ligne « noCurrentRideRoute » si elle ne s'applique plus qu'à la course en cours
 - [x] Compresser `done.md`
-- [ ] Commiter les deux dépôts quand le user le demande
+- [x] Commiter les deux dépôts quand le user le demande

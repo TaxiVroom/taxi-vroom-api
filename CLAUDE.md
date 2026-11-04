@@ -11,6 +11,8 @@ Always loaded:
 @.aimemory/INDEX.md
 @.aimemory/prefs.md
 
+- Every decision or correction of the user about a feature goes into its spec right away, unasked (see `specSync` in `.aimemory/prefs.md`).
+
 **Start** of non-trivial work (planning, and again when executing an accepted plan):
 
 1. Load the other hot shards: `arch.md`, `hyp.md`, `done.md`.
@@ -34,6 +36,7 @@ Skip both steps for a trivial one-file edit with no architectural learning.
 - `npm run deps:validate` — checks the architecture boundaries below via `.dependency-cruiser.js`. Run it after adding or moving a file across domain/application/infrastructure/api — a wrong import direction fails this even when `tsc` is happy.
 - Schema + migrations live in `prisma/` (`prisma/schema.prisma`, `prisma/migrations/`). `npm run migration:dev --name X` creates and applies a dev migration; `npm run migration:deploy` applies pending migrations (production); `npm run migration:reset` drops, recreates and remigrates; `npm run migration:status` checks status; `npm run db:seed` fills the reference data, a reset no longer does it; `npm run prisma:generate` regenerates the client; `npm run prisma:studio` opens the Prisma data browser.
 - After `migration:dev`, run `npm run prisma:generate`: since Prisma 7, `migrate dev` no longer regenerates the client. `tsc` won't catch a stale client: `PrismaRepositoryBase.client` is typed `any`.
+- Avoid database rules that `schema.prisma` cannot express (CHECK constraints, triggers, hand-written SQL in `migration.sql`): enforce them in the domain entity instead.
 - DB env vars: `.env.example` (DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_NAME).
 
 # Architecture: DDD Hexagonal + CQRS

@@ -261,7 +261,7 @@ Une étape à la fois, avec une pause et ta validation entre chaque. Exception d
 
 - [x] Mettre à jour `.aimemory` dans les deux dépôts et compresser `done.md`
 - [x] Mettre à jour les lignes `driverNeedsAppOpen` et `rideLostOnRestart` de `hyp.md`
-- [ ] Commiter les deux dépôts quand le user le demande
+- [x] Commiter les deux dépôts quand le user le demande
 
 ## Sources
 
