@@ -12,6 +12,7 @@ RideDispatcher|svc|src/modules/ride/application/ride-dispatcher.ts|offers to the
 RideOfferTimer|svc|src/modules/ride/application/ride-offer-timer.ts|15 s, in memory only
 RidePublisher|svc|src/modules/ride/application/ride-publisher.ts|writes rides/ and rideOffers/ after commit
 RideNotifier|svc|src/modules/ride/application/ride-notifier.ts|the ride's pushes, through SendPushCommand, which never fails
+BookingStarter|svc|src/modules/ride/application/booking-starter.ts|each minute and at startup, one booking per transaction locked FOR UPDATE SKIP LOCKED: go-online reminder 45 min before pickup, deadline 30 min before (committed driver online → DRIVER_ASSIGNED, else removed + dispatcher), not left 10 min before → removed + dispatcher; fixed times only, no route computing; temporary until a job queue, spec reservations-a-l-avance.md
 Notification|mod|src/modules/notification|push_registrations, one phone per user, FCM adapter, token deleted when FCM says it is gone
 RideRealtime|svc|src/modules/ride/infrastructure/firebase-ride-realtime.adapter.ts|RideRealtimePort @ltm:realtime
 DriverLocator|svc|src/modules/ride/infrastructure/firebase-driver-locator.adapter.ts|geohash queries on drivers/
@@ -43,6 +44,9 @@ stack=NestJS+Prisma7+Postgres+CQRS+DDD+FirebaseAdmin(Auth,RTDB,Storage)+MapboxDi
 http=all routes under /v1; GraphQL at /graphql; Swagger at /docs
 routesRide=POST rides (estimate), rides/:id/request, accept, decline, arrive, start, complete, cancel, withdraw, no-show, rating; GET rides (passenger's completed rides), GET rides/current (passenger or driver, 404 without one), GET rides/:id/boarding-code
 routesRegistration=GET registration-flows/me (get or create), PATCH me, GET me/email-availability, POST+GET me/documents, GET me/documents/:documentTypeId/url, GET registration-document-types, POST passengers (completes the passenger)
+routesBooking=POST rides with pickupAt (estimate for later), rides/:id/book, rides/:id/booking/accept, withdraw, refuse and depart ("Je pars", DRIVER_ASSIGNED → DRIVER_EN_ROUTE with an accepted offer); GET rides/booked (passenger), bookings/available?latitude&longitude and bookings/accepted (driver, canDepart); cancel also from BOOKED and DRIVER_ASSIGNED
+bookingModel=rides.kind IMMEDIATE|SCHEDULED; ride_schedules (rideId key, pickupAt, tripMeters) from the estimate on; ride_schedule_drivers (rideId key: one driver at most, created not upserted); ride_schedule_withdrawals (by the driver or the server, both excluded from the backup search); ride_schedule_refusals; ride_schedule_alerts (GO_ONLINE only, sent once); BOOKED and DRIVER_ASSIGNED only for SCHEDULED, checked by RideEntity (no CHECK, see prefs prismaOnlySchema); a DRIVER_ASSIGNED driver is busy for immediate offers (findBusyDriverIds)
+fallbackTariff=FALLBACK_TARIFF_DEPARTMENT (demo only, 67): a position without tariffs takes this département's; a geo.api failure still throws
 routesOther=GET+POST users, DELETE users/:id, GET me, PUT+DELETE me/push-registration, PATCH admin/registration-documents/:documentId/validate
 rideErrors=codes in src/modules/ride/domain/ride.errors.ts; the mobile reads 409 on cancel and accept, 422 on estimate, order and start
 dockerDb=docker compose in docker/: postgres-container on 5432 (db ddh), pgadmin on 5050
@@ -53,7 +57,7 @@ adminValidation=PATCH admin route needs any Firebase token, no admin role yet (T
 releaseTodo=before the first staging/prod release, create a dedicated server Mapbox token: MAPBOX_ACCESS_TOKEN is the default public one since 2026-10-21 because a new token asked for a payment method, and the default one cannot be deleted
 
 # stub for LTM overflow
-#N product|@ltm|ltm:product|Uber-like for French taxis; realtime and supply decisions
+#N product|@ltm|ltm:product|Ride-hailing for French taxis; realtime and supply decisions
 #N priceEstimate|@ltm|ltm:priceEstimate|validated estimate design, formula, Bas-Rhin tariff
 #N rideLifecycle|@ltm|ltm:rideLifecycle|statuses, offers, dispatch, who can do what, limits
 #N realtime|@ltm|ltm:realtime|Firebase paths written and read by the API

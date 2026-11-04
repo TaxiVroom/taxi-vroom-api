@@ -13,9 +13,8 @@ stuckRideBlocksDriver|open|A ride left in DRIVER_EN_ROUTE makes its driver busy 
 geoApiUnstable|open|geo.api.gouv.fr down stops every estimate|502, 504, 11 s and timeouts on 2026-11-02, no timeout in the adapter; proposal: fall back on Géoplateforme, decision pending
 supplementsTrustClient|likely|Supplement labels and prices are trusted from the driver app|complete-ride request carries label and unitPriceCents; the mobile list is fake; no server rule checks them
 envExampleStale|likely|.env.example does not match env.validation.ts|it lists DB_* and JWT_*, not DATABASE_URL which is required
-depsValidateCrash|open|npm run deps:validate crashes|seen before 2026-10-21, not re-run since
 
 #C id|model|links
-rideFlow|ESTIMATED→SEARCHING_DRIVER→NO_DRIVER_FOUND or DRIVER_EN_ROUTE (withdrawal returns to SEARCHING_DRIVER)→DRIVER_ARRIVED (→PASSENGER_NO_SHOW)→IN_PROGRESS→COMPLETED, plus CANCELLED|#N:RideEntity
+rideFlow|ESTIMATED→(booking: BOOKED→DRIVER_ASSIGNED→DRIVER_EN_ROUTE, or BOOKED/DRIVER_ASSIGNED→SEARCHING_DRIVER)→SEARCHING_DRIVER→NO_DRIVER_FOUND or DRIVER_EN_ROUTE (withdrawal returns to SEARCHING_DRIVER)→DRIVER_ARRIVED (→PASSENGER_NO_SHOW)→IN_PROGRESS→COMPLETED, plus CANCELLED|#N:RideEntity
 requestLifecycle|ContextInterceptor→FirebaseAuthGuard→RolesGuard→controller→CommandBus→service→entity→repository transaction→publish domain events→realtime publish after commit|#N:AuthGuards #N:RepoBase #N:RidePublisher
 userCreation|RegistrationCompleted→User→UserCreated→Passenger or Driver + Wallet, all awaited through emitAsync|#N:UserModule
