@@ -17,12 +17,14 @@ const tokenGoneCode = 'messaging/registration-token-not-registered';
 @Injectable()
 export class FirebasePushSenderAdapter implements PushSenderPort {
   async send(token: string, message: PushMessage): Promise<PushResult> {
-    const { title, body, expiresInMs } = message;
+    const { title, body, expiresInMs, data } = message;
     const expiresAt = addMilliseconds(new Date(), expiresInMs);
     try {
+      // The notification is shown by the phone; data is for the app.
       await getMessaging().send({
         token,
         notification: { title, body },
+        data,
         android: {
           priority: 'high',
           ttl: expiresInMs,

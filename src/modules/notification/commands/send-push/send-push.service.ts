@@ -33,7 +33,7 @@ export class SendPushService implements ICommandHandler {
   }
 
   private async send(command: SendPushCommand): Promise<void> {
-    const { userId, title, body, expiresInMs } = command;
+    const { userId, title, body, expiresInMs, data } = command;
     const token = await this.repo.findTokenByUserId(userId);
     if (token.isNone()) return;
 
@@ -41,6 +41,7 @@ export class SendPushService implements ICommandHandler {
       title,
       body,
       expiresInMs,
+      data,
     });
     if (result === PushResult.tokenGone) {
       await this.repo.deleteByUserId(userId);
