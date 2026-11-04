@@ -1,10 +1,13 @@
 import { Inject, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { EnvConfig } from '@config/env.validation';
 import { Err, None, Ok, Option, Result } from 'oxide.ts';
 import { RideEntity } from '@modules/ride/domain/ride.entity';
 import {
   NoDriverAvailableError,
   RideAreaNotServedError,
+  RidePickupTimeNotBookableError,
 } from '@modules/ride/domain/ride.errors';
 import {
   DriverCandidate,
@@ -28,7 +31,10 @@ import { RoutePlannerPort } from '@modules/ride/application/ports/route-planner.
 import { TerritoryPort } from '@modules/ride/application/ports/territory.port';
 import { EstimateRideCommand } from './estimate-ride.command';
 
-export type EstimateRideError = RideAreaNotServedError | NoDriverAvailableError;
+export type EstimateRideError =
+  | RideAreaNotServedError
+  | NoDriverAvailableError
+  | RidePickupTimeNotBookableError;
 
 // The ride priced, with what the passenger is shown to decide.
 export type RideEstimate = {
@@ -49,14 +55,20 @@ export class EstimateRideService implements ICommandHandler {
     @Inject(ROUTE_PLANNER) private readonly routePlanner: RoutePlannerPort,
     @Inject(PUBLIC_HOLIDAYS)
     private readonly publicHolidays: PublicHolidaysPort,
+    private readonly configService: ConfigService<EnvConfig, true>,
   ) {}
 
   async execute(
     command: EstimateRideCommand,
   ): Promise<Result<RideEstimate, EstimateRideError>> {
     const now = new Date();
-    const found = await this.findTariff(command.origin, now);
+    const { pickupAt } = command;
+    // A booking is priced with the arrêté in force on its day.
+    const found = await this.findTariff(command.origin, pickupAt ?? now);
     if (found.isNone()) return Err(new RideAreaNotServedError());
+    if (pickupAt) {
+      return this.estimateBooked(command, found.unwrap(), pickupAt, now);
+    }
 
     const candidates = await this.findCandidates(command.origin);
     const driver = RideEntity.approachingDriver(command.origin, candidates);
@@ -101,6 +113,47 @@ export class EstimateRideService implements ICommandHandler {
     return { ride, tariff, approachSeconds };
   }
 
+  // No free taxi needed: nobody has to be online the day before. The road
+  // is timed for the pickup time.
+  private async estimateBooked(
+    command: EstimateRideCommand,
+    tariff: TaxiTariff,
+    pickupAt: Date,
+    now: Date,
+  ): Promise<Result<RideEstimate, RidePickupTimeNotBookableError>> {
+    // Checked before calling Mapbox for nothing.
+    if (!RideEntity.isBookable(pickupAt, now)) {
+      return Err(new RidePickupTimeNotBookableError());
+    }
+    const { latitude, longitude } = command.origin;
+    const [trip, address] = await Promise.all([
+      this.routePlanner.planTrip(command.origin, command.destination, pickupAt),
+      this.addressFinder.findAddress(latitude, longitude),
+    ]);
+    const estimated = RideEntity.estimateBooked({
+      passengerId: command.passengerId,
+      origin: {
+        ...command.origin,
+        name: address.unwrapOr(RideEntity.unnamedPickup),
+      },
+      destination: command.destination,
+      tariff,
+      trip,
+      pickupAt,
+      publicHolidays: await this.findPublicHolidays(tariff, pickupAt),
+      now,
+    });
+    if (estimated.isErr()) return Err(estimated.unwrapErr());
+    const ride = estimated.unwrap();
+    await this.rideRepo.transaction(async () => this.rideRepo.save(ride));
+    this.warnIfOutdated(tariff, now);
+    return Ok({ ride, tariff, approachSeconds: 0 });
+  }
+
+  // A position without tariffs, in France or abroad, takes the fallback
+  // département's when one is set: the demo, never production. A failure of
+  // the territory lookup throws instead, so it never prices a known
+  // département at the fallback's tariffs.
   private async findTariff(
     pickup: RidePosition,
     now: Date,
@@ -109,9 +162,12 @@ export class EstimateRideService implements ICommandHandler {
       pickup.latitude,
       pickup.longitude,
     );
-    return departmentCode.isSome()
-      ? this.rideRepo.findTariff(departmentCode.unwrap(), now)
+    const tariff: Option<TaxiTariff> = departmentCode.isSome()
+      ? await this.rideRepo.findTariff(departmentCode.unwrap(), now)
       : None;
+    const fallback = this.configService.get('FALLBACK_TARIFF_DEPARTMENT');
+    if (tariff.isSome() || !fallback) return tariff;
+    return this.rideRepo.findTariff(fallback, now);
   }
 
   private async findCandidates(
@@ -131,12 +187,13 @@ export class EstimateRideService implements ICommandHandler {
     }));
   }
 
-  // This year's and the next one's: a ride may end after New Year's Eve.
+  // The year of the ride and the next one: a ride may end after New Year's
+  // Eve.
   private async findPublicHolidays(
     tariff: TaxiTariff,
-    now: Date,
+    at: Date,
   ): Promise<Set<string>> {
-    const year = now.getUTCFullYear();
+    const year = at.getUTCFullYear();
     const years = await Promise.all(
       [year, year + 1].map((y) =>
         this.publicHolidays.findPublicHolidays(tariff.holidayZone, y),

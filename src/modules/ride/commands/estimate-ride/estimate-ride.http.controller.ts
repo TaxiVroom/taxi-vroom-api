@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   HttpStatus,
@@ -16,6 +17,7 @@ import { UserRoles } from '@modules/user/domain/user.types';
 import {
   NoDriverAvailableError,
   RideAreaNotServedError,
+  RidePickupTimeNotBookableError,
 } from '@modules/ride/domain/ride.errors';
 import { RideEstimateResponseDto } from '@modules/ride/dtos/ride-estimate.response.dto';
 import { RideMapper } from '@modules/ride/ride.mapper';
@@ -38,7 +40,12 @@ export class EstimateRideHttpController {
     status: HttpStatus.UNPROCESSABLE_ENTITY,
     description:
       'RIDE.AREA_NOT_SERVED: no tariffs for the département yet; ' +
-      'RIDE.NO_DRIVER_AVAILABLE: no free taxi within reach',
+      'RIDE.NO_DRIVER_AVAILABLE: no free taxi within reach, for a ride now',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description:
+      'RIDE.PICKUP_TIME_NOT_BOOKABLE: pickupAt not 30 min to 30 days ahead',
   })
   @Roles(UserRoles.passenger)
   @Post(routesV1.ride.root)
@@ -59,6 +66,7 @@ export class EstimateRideHttpController {
             latitude: body.destinationLatitude,
             longitude: body.destinationLongitude,
           },
+          pickupAt: body.pickupAt ? new Date(body.pickupAt) : undefined,
         }),
       );
 
@@ -66,6 +74,12 @@ export class EstimateRideHttpController {
       Ok: ({ ride, tariff, approachSeconds }: RideEstimate) =>
         this.mapper.toEstimateResponse(ride, tariff, approachSeconds),
       Err: (error: Error) => {
+        if (error instanceof RidePickupTimeNotBookableError) {
+          throw new BadRequestException({
+            message: error.message,
+            code: error.code,
+          });
+        }
         if (
           error instanceof RideAreaNotServedError ||
           error instanceof NoDriverAvailableError

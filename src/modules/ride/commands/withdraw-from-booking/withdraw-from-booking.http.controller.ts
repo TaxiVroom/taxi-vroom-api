@@ -1,0 +1,70 @@
+import {
+  ConflictException,
+  Controller,
+  ForbiddenException,
+  HttpCode,
+  HttpStatus,
+  NotFoundException,
+  Param,
+  Post,
+} from '@nestjs/common';
+import { CommandBus } from '@nestjs/cqrs';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { match, Result } from 'oxide.ts';
+import { routesV1 } from '@config/app.routes';
+import { ApiErrorResponse } from '@libs/api/api-error.response';
+import { CurrentUser } from '@modules/auth/current-user.decorator';
+import { RegisteredUser } from '@modules/auth/domain/authenticated-user';
+import { Roles } from '@modules/auth/roles.decorator';
+import { UserRoles } from '@modules/user/domain/user.types';
+import {
+  RideNotAssignedToDriverError,
+  RideNotFoundError,
+  RideWrongStepError,
+} from '@modules/ride/domain/ride.errors';
+import { WithdrawFromBookingCommand } from './withdraw-from-booking.command';
+import { WithdrawFromBookingError } from './withdraw-from-booking.service';
+
+@Controller(routesV1.version)
+export class WithdrawFromBookingHttpController {
+  constructor(private readonly commandBus: CommandBus) {}
+
+  @ApiOperation({
+    summary: 'The driver gives a booking up, before it starts',
+  })
+  @ApiResponse({ status: HttpStatus.NO_CONTENT })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, type: ApiErrorResponse })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, type: ApiErrorResponse })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'RIDE.WRONG_STEP: the booking already started',
+  })
+  @Roles(UserRoles.driver)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Post(routesV1.ride.withdrawFromBooking)
+  async withdraw(
+    @CurrentUser() user: RegisteredUser,
+    @Param('rideId') rideId: string,
+  ): Promise<void> {
+    const result: Result<void, WithdrawFromBookingError> =
+      await this.commandBus.execute(
+        new WithdrawFromBookingCommand({ rideId, driverId: user.id }),
+      );
+
+    return match(result, {
+      Ok: () => undefined,
+      Err: (error: Error) => {
+        if (error instanceof RideNotFoundError) {
+          throw new NotFoundException(error.message);
+        }
+        if (error instanceof RideNotAssignedToDriverError) {
+          throw new ForbiddenException(error.message);
+        }
+        if (error instanceof RideWrongStepError) {
+          throw new ConflictException(error.message);
+        }
+        throw error;
+      },
+    });
+  }
+}

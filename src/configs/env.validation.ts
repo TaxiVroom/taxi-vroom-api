@@ -14,6 +14,9 @@ const envSchema = z.object({
   FIREBASE_DATABASE_URL: z.string().url(),
   // The server's own token, for the routes of the price estimates.
   MAPBOX_ACCESS_TOKEN: z.string().min(1),
+  // Demo only, never in production: a position without tariffs takes this
+  // département's, e.g. "67", so testers outside the Bas-Rhin can order.
+  FALLBACK_TARIFF_DEPARTMENT: z.string().min(1).optional(),
   NODE_ENV: z
     .enum(['development', 'production', 'test'])
     .default('development'),

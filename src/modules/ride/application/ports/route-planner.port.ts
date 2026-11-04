@@ -1,4 +1,4 @@
-import { TaxiRoute } from '@modules/ride/domain/ride.types';
+import { RouteSegment, TaxiRoute } from '@modules/ride/domain/ride.types';
 
 export interface RoutePoint {
   latitude: number;
@@ -13,4 +13,12 @@ export interface RoutePlannerPort {
     pickup: RoutePoint,
     destination: RoutePoint,
   ): Promise<TaxiRoute>;
+
+  // The road from the pickup to the destination, timed with the usual
+  // traffic at that departure time.
+  planTrip(
+    pickup: RoutePoint,
+    destination: RoutePoint,
+    departsAt: Date,
+  ): Promise<RouteSegment[]>;
 }

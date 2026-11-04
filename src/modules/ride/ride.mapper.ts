@@ -2,13 +2,20 @@ import { Injectable } from '@nestjs/common';
 import { Mapper } from '@libs/ddd';
 import { RideEntity } from './domain/ride.entity';
 import {
+  RideKind,
   RideOffer,
   RideOfferStatus,
   RideProps,
   RideRating,
+  RideSchedule,
   RideStatus,
   RideStep,
   RideSupplement,
+  RideTiming,
+  ScheduleAlert,
+  ScheduleDriver,
+  ScheduleRefusal,
+  ScheduleWithdrawal,
   TaxiTariff,
 } from './domain/ride.types';
 import { RideResponseDto } from './dtos/ride.response.dto';
@@ -20,6 +27,7 @@ import {
 export type RideModel = {
   id: string;
   passengerId: string;
+  kind: RideKind;
   status: RideStatus;
   originName: string;
   originLatitude: number;
@@ -69,11 +77,23 @@ export type RideOfferModel = {
   expiration: { expiredAt: Date } | null;
 };
 
+// A booking with its committed driver, the drivers who gave it up and the
+// alerts sent.
+export type RideScheduleModel = {
+  pickupAt: Date;
+  tripMeters: number;
+  driver: ScheduleDriver | null;
+  withdrawals: ScheduleWithdrawal[];
+  refusals: ScheduleRefusal[];
+  alerts: ScheduleAlert[];
+};
+
 // A ride row with its sub-tables, as loaded and saved by the repository.
 export type RideRecord = RideModel & {
   offers: RideOfferModel[];
   noDriverFound: { stoppedAt: Date } | null;
   cancellation: { cancelledAt: Date } | null;
+  schedule: RideScheduleModel | null;
 };
 
 @Injectable()
@@ -83,9 +103,11 @@ export class RideMapper
   toPersistence(entity: RideEntity): RideRecord {
     const props = entity.getProps();
     const step = props.step;
+    const schedule = entity.schedule;
     return {
       id: entity.id,
       passengerId: props.passengerId,
+      kind: entity.kind,
       status: step.status,
       originName: props.origin.name,
       originLatitude: props.origin.latitude,
@@ -109,6 +131,16 @@ export class RideMapper
         step.status === RideStatus.cancelled
           ? { cancelledAt: step.cancelledAt }
           : null,
+      schedule: schedule
+        ? {
+            pickupAt: schedule.pickupAt,
+            tripMeters: schedule.tripMeters,
+            driver: schedule.driver,
+            withdrawals: schedule.withdrawals,
+            refusals: schedule.refusals,
+            alerts: schedule.alerts,
+          }
+        : null,
     };
   }
 
@@ -119,6 +151,7 @@ export class RideMapper
       updatedAt: record.updatedAt,
       props: {
         passengerId: record.passengerId,
+        timing: this.timingToDomain(record),
         origin: {
           name: record.originName,
           latitude: record.originLatitude,
@@ -281,12 +314,37 @@ export class RideMapper
     return { arrivedAt, start, noShow: null };
   }
 
+  // The kind tells whether ride_schedules holds a row: a missing one is a
+  // corrupted ride.
+  private timingToDomain(record: RideRecord): RideTiming {
+    if (record.kind === RideKind.immediate) {
+      return { kind: RideKind.immediate };
+    }
+    const { pickupAt, tripMeters, driver, withdrawals, refusals, alerts } =
+      this.required(record.schedule);
+    const schedule: RideSchedule = {
+      pickupAt,
+      tripMeters,
+      driver,
+      withdrawals: [...withdrawals].sort(
+        (a, b) => a.withdrawnAt.getTime() - b.withdrawnAt.getTime(),
+      ),
+      refusals,
+      alerts,
+    };
+    return { kind: RideKind.scheduled, schedule };
+  }
+
   // The status tells which sub-table holds the step's data: a missing row is
   // a corrupted ride.
   private stepToDomain(record: RideRecord): RideStep {
     switch (record.status) {
       case RideStatus.estimated:
         return { status: RideStatus.estimated };
+      case RideStatus.booked:
+        return { status: RideStatus.booked };
+      case RideStatus.driverAssigned:
+        return { status: RideStatus.driverAssigned };
       case RideStatus.searchingDriver:
         return { status: RideStatus.searchingDriver };
       case RideStatus.noDriverFound:

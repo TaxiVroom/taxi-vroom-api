@@ -1,6 +1,14 @@
 import { AggregateID, AggregateRoot } from '@libs/ddd';
 import { ArgumentInvalidException } from '@libs/exceptions';
 import { randomInt, randomUUID } from 'crypto';
+import {
+  addDays,
+  addMinutes,
+  differenceInMilliseconds,
+  differenceInMinutes,
+  isBefore,
+  max,
+} from 'date-fns';
 import { distanceBetween } from 'geofire-common';
 import { Err, None, Ok, Option, Result, Some } from 'oxide.ts';
 import {
@@ -8,31 +16,42 @@ import {
   NoDriverAvailableError,
   NoShowTooEarlyError,
   RideAlreadyRatedError,
+  RideBookingOverlapError,
+  RideBookingTakenError,
+  RideDriverBusyError,
   RideEstimateExpiredError,
   RideNotAssignedToDriverError,
   RideNotOwnedByPassengerError,
   RideNotSearchingDriverError,
   RideOfferAlreadyPendingError,
   RideOfferNotPendingError,
+  RidePickupTimeNotBookableError,
   RideWrongStepError,
   WrongBoardingCodeError,
 } from './ride.errors';
 import {
   AcceptedRideOffer,
+  BoardingCode,
+  BookingStart,
   DriverCandidate,
+  EstimateBookedRideProps,
   EstimateRideProps,
   ExpiredRideOffer,
   PendingRideOffer,
   RideCompliment,
   RideCompletion,
+  RideKind,
   RideOffer,
   RideOfferStatus,
   RidePosition,
   RideProps,
+  RideSchedule,
   RideStatus,
   RideSupplement,
+  ScheduleAlert,
+  ScheduleAlertKind,
 } from './ride.types';
-import { estimateFare } from './taxi-fare';
+import { estimateBookedFare, estimateFare } from './taxi-fare';
 
 export class RideEntity extends AggregateRoot<RideProps> {
   protected readonly _id: AggregateID;
@@ -47,9 +66,35 @@ export class RideEntity extends AggregateRoot<RideProps> {
   // Shown instead of the address when it cannot be found.
   static readonly unnamedPickup = 'Position de départ';
 
-  // Uber's way: an estimate can be ordered for a few minutes, then the taxis
-  // moved and the traffic changed.
+  // An estimate can be ordered for a few minutes, then the taxis moved and
+  // the traffic changed.
   static readonly estimateValidityMs = 5 * 60_000;
+
+  // A booked taxi needs time to be found: no pickup sooner. The app offers
+  // the same slots.
+  static readonly bookingMinimumLeadMinutes = 30;
+
+  // The app offers today and the next 30 days, until that day's last slot.
+  static readonly bookableDays = 31;
+
+  // A booking's deadline, this long before its pickup: its committed driver
+  // must be online, or it goes to another taxi, which has the time to come.
+  static readonly bookingDepartureLeadMinutes = 30;
+
+  // The committed driver is reminded to go online this long before the
+  // pickup.
+  static readonly bookingReminderLeadMinutes = 45;
+
+  // The committed driver leaves this long before the pickup at the latest:
+  // a backup taxi within reach can still come about on time.
+  static readonly bookingDepartureDeadlineMinutes = 10;
+
+  // Drivers see the bookings this far around them: a booking is often
+  // looked at from home, far from its pickup.
+  static readonly bookingsVisibleRadiusMeters = 20_000;
+
+  // A driver cannot be on time for two pickups closer than this.
+  static readonly bookingsMinimumGapMinutes = 60;
 
   // The price shown before ordering, computed from the closest free taxi:
   // nobody is told about the ride yet.
@@ -60,6 +105,7 @@ export class RideEntity extends AggregateRoot<RideProps> {
       createdAt: now,
       props: {
         passengerId: props.passengerId,
+        timing: { kind: RideKind.immediate },
         origin: props.origin,
         destination: props.destination,
         estimatedPrice: estimateFare(tariff, route, now, publicHolidays),
@@ -68,6 +114,54 @@ export class RideEntity extends AggregateRoot<RideProps> {
         offers: [],
       },
     });
+  }
+
+  // The price of a ride booked for later, at the tariff of its pickup time:
+  // its taxi is not known yet.
+  static estimateBooked(
+    props: EstimateBookedRideProps,
+  ): Result<RideEntity, RidePickupTimeNotBookableError> {
+    const { tariff, trip, pickupAt, publicHolidays, now } = props;
+    if (!RideEntity.isBookable(pickupAt, now)) {
+      return Err(new RidePickupTimeNotBookableError());
+    }
+    return Ok(
+      new RideEntity({
+        id: randomUUID(),
+        createdAt: now,
+        props: {
+          passengerId: props.passengerId,
+          timing: {
+            kind: RideKind.scheduled,
+            schedule: {
+              pickupAt,
+              tripMeters: Math.round(trip.reduce((m, s) => m + s.meters, 0)),
+              driver: null,
+              withdrawals: [],
+              refusals: [],
+              alerts: [],
+            },
+          },
+          origin: props.origin,
+          destination: props.destination,
+          estimatedPrice: estimateBookedFare(
+            tariff,
+            trip,
+            pickupAt,
+            publicHolidays,
+          ),
+          tariffId: tariff.id,
+          step: { status: RideStatus.estimated },
+          offers: [],
+        },
+      }),
+    );
+  }
+
+  static isBookable(pickupAt: Date, now: Date): boolean {
+    const earliest = addMinutes(now, RideEntity.bookingMinimumLeadMinutes);
+    const latest = addDays(now, RideEntity.bookableDays);
+    return !isBefore(pickupAt, earliest) && isBefore(pickupAt, latest);
   }
 
   // The taxi that would come, whose approach is part of the price.
@@ -79,15 +173,16 @@ export class RideEntity extends AggregateRoot<RideProps> {
     return driver ? Ok(driver) : Err(new NoDriverAvailableError());
   }
 
-  // Uber's limit: then the driver calls the passenger, or cancels.
+  // Then the driver calls the passenger, or cancels.
   static readonly maxBoardingCodeAttempts = 5;
 
-  // Uber's and Bolt's wait at the pickup before the passenger counts as
-  // absent.
+  // The wait at the pickup before the passenger counts as absent.
   static readonly noShowWaitMs = 5 * 60_000;
 
   // Until the passenger is in the taxi.
   private static readonly cancellableStatuses = [
+    RideStatus.booked,
+    RideStatus.driverAssigned,
     RideStatus.searchingDriver,
     RideStatus.driverEnRoute,
     RideStatus.driverArrived,
@@ -109,6 +204,21 @@ export class RideEntity extends AggregateRoot<RideProps> {
 
   get status(): RideStatus {
     return this.props.step.status;
+  }
+
+  get kind(): RideKind {
+    return this.props.timing.kind;
+  }
+
+  // Only for a ride booked in advance.
+  get schedule(): RideSchedule | undefined {
+    const timing = this.props.timing;
+    return timing.kind === RideKind.scheduled ? timing.schedule : undefined;
+  }
+
+  // The driver committed to the booking, before it starts.
+  get scheduledDriverId(): string | undefined {
+    return this.schedule?.driver?.driverId;
   }
 
   // While the passenger waits for the driver and tells it at pickup.
@@ -157,7 +267,11 @@ export class RideEntity extends AggregateRoot<RideProps> {
     if (this.props.passengerId !== passengerId) {
       return Err(new RideNotOwnedByPassengerError());
     }
-    if (this.status !== RideStatus.estimated) {
+    // A ride estimated for later is booked, not ordered.
+    if (
+      this.status !== RideStatus.estimated ||
+      this.kind !== RideKind.immediate
+    ) {
       return Err(new RideWrongStepError());
     }
     const ageMs = now.getTime() - this.createdAt.getTime();
@@ -165,6 +279,201 @@ export class RideEntity extends AggregateRoot<RideProps> {
       return Err(new RideEstimateExpiredError());
     }
     this.props.step = { status: RideStatus.searchingDriver };
+    return Ok(undefined);
+  }
+
+  // "Réserver le taxi": the passenger books the ride estimated for later, at
+  // its price. It waits for a driver to commit to it.
+  book(
+    passengerId: string,
+    now: Date,
+  ): Result<
+    void,
+    | RideNotOwnedByPassengerError
+    | RideWrongStepError
+    | RideEstimateExpiredError
+    | RidePickupTimeNotBookableError
+  > {
+    if (this.props.passengerId !== passengerId) {
+      return Err(new RideNotOwnedByPassengerError());
+    }
+    const schedule = this.schedule;
+    if (this.status !== RideStatus.estimated || !schedule) {
+      return Err(new RideWrongStepError());
+    }
+    const ageMs = differenceInMilliseconds(now, this.createdAt);
+    if (ageMs > RideEntity.estimateValidityMs) {
+      return Err(new RideEstimateExpiredError());
+    }
+    // The estimate was made just before the limit.
+    if (!RideEntity.isBookable(schedule.pickupAt, now)) {
+      return Err(new RidePickupTimeNotBookableError());
+    }
+    this.props.step = { status: RideStatus.booked };
+    return Ok(undefined);
+  }
+
+  // "Accepter" a booking: the driver commits to it. Their other bookings
+  // tell whether they can be on time for this one.
+  acceptBooking(
+    driverId: string,
+    otherPickupTimes: Date[],
+    now: Date,
+  ): Result<
+    void,
+    RideWrongStepError | RideBookingTakenError | RideBookingOverlapError
+  > {
+    const schedule = this.schedule;
+    if (this.status !== RideStatus.booked || !schedule) {
+      return Err(new RideWrongStepError());
+    }
+    if (schedule.driver) {
+      return schedule.driver.driverId === driverId
+        ? Ok(undefined)
+        : Err(new RideBookingTakenError());
+    }
+    if (RideEntity.overlaps(schedule.pickupAt, otherPickupTimes)) {
+      return Err(new RideBookingOverlapError());
+    }
+    schedule.driver = { driverId, acceptedAt: now };
+    return Ok(undefined);
+  }
+
+  // The driver gives a booking up before it starts: other drivers can take
+  // it again.
+  withdrawFromBooking(
+    driverId: string,
+    now: Date,
+  ): Result<void, RideNotAssignedToDriverError | RideWrongStepError> {
+    const schedule = this.schedule;
+    if (!schedule?.driver || schedule.driver.driverId !== driverId) {
+      return Err(new RideNotAssignedToDriverError());
+    }
+    if (this.status !== RideStatus.booked) {
+      return Err(new RideWrongStepError());
+    }
+    schedule.withdrawals.push({
+      id: randomUUID(),
+      ...schedule.driver,
+      withdrawnAt: now,
+    });
+    schedule.driver = null;
+    return Ok(undefined);
+  }
+
+  // "Refuser": the driver does not want the booking. Nobody waited for their
+  // answer, so nobody is told; it is just never offered to them. A booking
+  // they accepted is given up with withdrawFromBooking instead.
+  refuseBooking(driverId: string, now: Date): Result<void, RideWrongStepError> {
+    const schedule = this.schedule;
+    if (this.status !== RideStatus.booked || !schedule) {
+      return Err(new RideWrongStepError());
+    }
+    if (schedule.driver?.driverId === driverId) {
+      return Err(new RideWrongStepError());
+    }
+    if (schedule.refusals.some((r) => r.driverId === driverId)) {
+      return Ok(undefined);
+    }
+    schedule.refusals.push({ driverId, refusedAt: now });
+    return Ok(undefined);
+  }
+
+  // 45 min before the pickup, the committed driver is told to go online
+  // before the deadline, once.
+  remindToGoOnline(now: Date): Result<void, RideWrongStepError> {
+    const schedule = this.schedule;
+    if (this.status !== RideStatus.booked || !schedule?.driver) {
+      return Err(new RideWrongStepError());
+    }
+    const remindsAt = addMinutes(
+      schedule.pickupAt,
+      -RideEntity.bookingReminderLeadMinutes,
+    );
+    if (isBefore(now, remindsAt)) return Err(new RideWrongStepError());
+    if (this.alert(ScheduleAlertKind.goOnline)) {
+      return Err(new RideWrongStepError());
+    }
+    this.addAlert(ScheduleAlertKind.goOnline, now);
+    return Ok(undefined);
+  }
+
+  // The deadline, 30 min before the pickup: the ride is its committed
+  // driver's if they are online. Otherwise, or without one, a driver is
+  // searched, never one who gave the booking up.
+  startBooking(
+    isCommittedDriverOnline: boolean,
+    now: Date,
+  ): Result<BookingStart, RideWrongStepError> {
+    const schedule = this.schedule;
+    if (this.status !== RideStatus.booked || !schedule) {
+      return Err(new RideWrongStepError());
+    }
+    const deadline = addMinutes(
+      schedule.pickupAt,
+      -RideEntity.bookingDepartureLeadMinutes,
+    );
+    if (isBefore(now, deadline)) return Err(new RideWrongStepError());
+
+    if (!schedule.driver) {
+      this.props.step = { status: RideStatus.searchingDriver };
+      return Ok(BookingStart.searching);
+    }
+    if (isCommittedDriverOnline) {
+      this.props.step = { status: RideStatus.driverAssigned };
+      return Ok(BookingStart.assigned);
+    }
+    this.removeCommittedDriver(now);
+    return Ok(BookingStart.committedDriverRemoved);
+  }
+
+  // 10 min before the pickup, a committed driver who did not leave yet loses
+  // the booking: another driver is searched, never them. Without this, the
+  // ride would stay assigned forever. Once left, they keep it.
+  removeDriverNotLeft(now: Date): Result<void, RideWrongStepError> {
+    const schedule = this.schedule;
+    if (this.status !== RideStatus.driverAssigned || !schedule) {
+      return Err(new RideWrongStepError());
+    }
+    const latestDeparture = addMinutes(
+      schedule.pickupAt,
+      -RideEntity.bookingDepartureDeadlineMinutes,
+    );
+    if (isBefore(now, latestDeparture)) return Err(new RideWrongStepError());
+
+    this.removeCommittedDriver(now);
+    return Ok(undefined);
+  }
+
+  // "Je pars": the committed driver leaves for the pickup. The ride goes on
+  // as after an accepted offer, which it gets.
+  departForBooking(
+    driverId: string,
+    isBusy: boolean,
+    now: Date,
+  ): Result<
+    void,
+    RideNotAssignedToDriverError | RideWrongStepError | RideDriverBusyError
+  > {
+    if (this.scheduledDriverId !== driverId) {
+      return Err(new RideNotAssignedToDriverError());
+    }
+    if (this.status !== RideStatus.driverAssigned) {
+      return Err(new RideWrongStepError());
+    }
+    if (isBusy) return Err(new RideDriverBusyError());
+
+    this.props.offers.push({
+      id: randomUUID(),
+      driverId,
+      status: RideOfferStatus.accepted,
+      offeredAt: now,
+      acceptedAt: now,
+    });
+    this.props.step = {
+      status: RideStatus.driverEnRoute,
+      boardingCode: RideEntity.newBoardingCode(),
+    };
     return Ok(undefined);
   }
 
@@ -213,10 +522,7 @@ export class RideEntity extends AggregateRoot<RideProps> {
     });
     this.props.step = {
       status: RideStatus.driverEnRoute,
-      boardingCode: {
-        code: randomInt(0, 10_000).toString().padStart(4, '0'),
-        failedAttempts: 0,
-      },
+      boardingCode: RideEntity.newBoardingCode(),
     };
     return Ok(undefined);
   }
@@ -407,7 +713,13 @@ export class RideEntity extends AggregateRoot<RideProps> {
     if (step.status !== RideStatus.driverArrived) {
       return Err(new RideWrongStepError());
     }
-    const waitedMs = now.getTime() - step.arrivedAt.getTime();
+    // A booked passenger is waited for from their pickup time when the
+    // driver came early, like the arrêté says for Paris (art. 10).
+    const pickupAt = this.schedule?.pickupAt;
+    const waitsFrom = pickupAt
+      ? max([step.arrivedAt, pickupAt])
+      : step.arrivedAt;
+    const waitedMs = differenceInMilliseconds(now, waitsFrom);
     if (waitedMs < RideEntity.noShowWaitMs)
       return Err(new NoShowTooEarlyError());
 
@@ -459,8 +771,20 @@ export class RideEntity extends AggregateRoot<RideProps> {
     if (pending.length > 1) {
       throw new ArgumentInvalidException('Ride: one pending offer at most');
     }
-    if (this.status === RideStatus.estimated && offers.length > 0) {
+    const beforeOrder = [
+      RideStatus.estimated,
+      RideStatus.booked,
+      RideStatus.driverAssigned,
+    ];
+    if (beforeOrder.includes(this.status) && offers.length > 0) {
       throw new ArgumentInvalidException('Ride: no offer before the order');
+    }
+    const bookingStatuses = [RideStatus.booked, RideStatus.driverAssigned];
+    if (bookingStatuses.includes(this.status) && !this.schedule) {
+      throw new ArgumentInvalidException('Ride: only a scheduled ride books');
+    }
+    if (this.status === RideStatus.driverAssigned && !this.scheduledDriverId) {
+      throw new ArgumentInvalidException('Ride: assigned to its driver');
     }
     if (pending.length === 1 && this.status !== RideStatus.searchingDriver) {
       throw new ArgumentInvalidException(
@@ -482,14 +806,66 @@ export class RideEntity extends AggregateRoot<RideProps> {
     }
   }
 
+  // The closest free driver within reach who was never asked, and never
+  // refused or gave up the booking.
   private closestReachableDriver(
     candidates: DriverCandidate[],
   ): string | undefined {
-    const alreadyAsked = new Set(this.props.offers.map((o) => o.driverId));
-    return RideEntity.closestFreeDriver(
-      this.props.origin,
-      candidates.filter((c) => !alreadyAsked.has(c.driverId)),
-    )?.driverId;
+    const schedule = this.schedule;
+    const excluded = new Set([
+      ...this.props.offers.map((o) => o.driverId),
+      ...(schedule?.refusals.map((r) => r.driverId) ?? []),
+      ...(schedule?.withdrawals.map((w) => w.driverId) ?? []),
+    ]);
+    const notAsked = candidates.filter((c) => !excluded.has(c.driverId));
+    return RideEntity.closestFreeDriver(this.props.origin, notAsked)?.driverId;
+  }
+
+  // The committed driver loses the booking before leaving, as if they had
+  // given it up: another driver is searched, never them.
+  private removeCommittedDriver(now: Date): void {
+    const schedule = this.schedule;
+    if (!schedule?.driver) return;
+    schedule.withdrawals.push({
+      id: randomUUID(),
+      ...schedule.driver,
+      withdrawnAt: now,
+    });
+    schedule.driver = null;
+    this.props.step = { status: RideStatus.searchingDriver };
+  }
+
+  // The alert of this kind already sent to the committed driver.
+  private alert(kind: ScheduleAlertKind): ScheduleAlert | undefined {
+    const driverId = this.scheduledDriverId;
+    return this.schedule?.alerts.find(
+      (a) => a.driverId === driverId && a.kind === kind,
+    );
+  }
+
+  private addAlert(kind: ScheduleAlertKind, now: Date): void {
+    const schedule = this.schedule;
+    if (!schedule?.driver) return;
+    schedule.alerts.push({
+      driverId: schedule.driver.driverId,
+      kind,
+      sentAt: now,
+    });
+  }
+
+  private static newBoardingCode(): BoardingCode {
+    return {
+      code: randomInt(0, 10_000).toString().padStart(4, '0'),
+      failedAttempts: 0,
+    };
+  }
+
+  private static overlaps(pickupAt: Date, otherPickupTimes: Date[]): boolean {
+    return otherPickupTimes.some(
+      (other) =>
+        Math.abs(differenceInMinutes(pickupAt, other)) <
+        RideEntity.bookingsMinimumGapMinutes,
+    );
   }
 
   private static closestFreeDriver(

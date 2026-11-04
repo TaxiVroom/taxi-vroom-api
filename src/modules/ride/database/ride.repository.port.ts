@@ -30,10 +30,37 @@ export interface RideRepositoryPort extends RepositoryPort<RideEntity> {
   // ride.
   save(ride: RideEntity): Promise<void>;
 
-  // Among these drivers, those already proposed a ride or driving one.
-  findBusyDriverIds(driverIds: string[]): Promise<Set<string>>;
+  // Among these drivers, those already proposed a ride, driving one, or
+  // waiting to leave for their booking. exceptRideId: not counting that ride.
+  findBusyDriverIds(
+    driverIds: string[],
+    exceptRideId?: string,
+  ): Promise<Set<string>>;
 
   findParticipants(rideId: string): Promise<RideParticipants>;
+
+  // The pickup times of the other bookings this driver committed to, which
+  // they have not left for yet.
+  findCommittedPickupTimes(
+    driverId: string,
+    exceptRideId: string,
+  ): Promise<Date[]>;
+
+  // The next booking due in leadMinutes or less, locked until the end of the
+  // transaction: another server skips it. Call it inside a transaction.
+  lockNextDueBooking(leadMinutes: number): Promise<Option<RideEntity>>;
+
+  // The same, for the next booking due in leadMinutes or less whose
+  // committed driver was not reminded to go online yet.
+  lockNextBookingToRemind(leadMinutes: number): Promise<Option<RideEntity>>;
+
+  // The same, for the next booking still assigned leadMinutes or less before
+  // its pickup: its driver did not leave in time.
+  lockNextBookingNotLeft(leadMinutes: number): Promise<Option<RideEntity>>;
+
+  // The ride, locked until the end of the transaction; waits if another one
+  // holds it. Call it inside a transaction.
+  lockOneById(id: string): Promise<Option<RideEntity>>;
 
   // The tariffs in force in the département at that time: the latest arrêté
   // already valid. None where the app does not work yet.

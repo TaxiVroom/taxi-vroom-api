@@ -52,9 +52,41 @@ export function estimateFare(
     const cents = tariff.pickupCents + approach.cents + trip.cents;
     return Math.max(cents, tariff.minimumFareCents);
   };
+  return toRange(fare(loaded), fare({ day: c, night: d }));
+}
+
+// The farthest a booked taxi comes from: the same reach as a taxi called
+// now. Its approach is not known when booking.
+const bookedApproach: RouteSegment[] = [{ meters: 5000, seconds: 0 }];
+
+// A booked ride, whose taxi is not known yet: the low end without approach,
+// the high end with the farthest approach (spec reservations-a-l-avance.md).
+// Each stretch at the tariff of the hour of the pickup.
+export function estimateBookedFare(
+  tariff: TaxiTariff,
+  trip: RouteSegment[],
+  pickupAt: Date,
+  publicHolidays: Set<string>,
+): EstimatedPrice {
+  const context = { tariff, publicHolidays };
+  const { a, b, c, d } = tariff.kmCents;
+  const loaded = { day: a, night: b };
+  const approach = runMeter(context, bookedApproach, loaded, pickupAt);
+  const fare = (rates: KmRates, approachCents: number): number => {
+    const cents =
+      tariff.pickupCents +
+      approachCents +
+      runMeter(context, trip, rates, pickupAt).cents;
+    return Math.max(cents, tariff.minimumFareCents);
+  };
+  return toRange(fare(loaded, 0), fare({ day: c, night: d }, approach.cents));
+}
+
+// Never narrower than the meter: the low end floored, the high end ceiled.
+function toRange(lowCents: number, highCents: number): EstimatedPrice {
   return {
-    minCents: Math.floor(fare(loaded) / dropCents) * dropCents,
-    maxCents: Math.ceil(fare({ day: c, night: d }) / dropCents) * dropCents,
+    minCents: Math.floor(lowCents / dropCents) * dropCents,
+    maxCents: Math.ceil(highCents / dropCents) * dropCents,
   };
 }
 

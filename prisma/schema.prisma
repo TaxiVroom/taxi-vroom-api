@@ -92,6 +92,10 @@ model Driver {
   documents        Document[]
   suspensionEvents DriverSuspensionEvent[]
   rideOffers       RideOffer[]
+  scheduledRides      RideScheduleDriver[]
+  scheduleWithdrawals RideScheduleWithdrawal[]
+  scheduleRefusals    RideScheduleRefusal[]
+  scheduleAlerts      RideScheduleAlert[]
 
   @@map("drivers")
 }
@@ -275,6 +279,11 @@ model TaxiTariff {
 enum RideStatus {
   /// The price is shown to the passenger, the ride is not ordered yet.
   ESTIMATED
+  /// Booked in advance, waiting for its departure, 30 min before the pickup.
+  BOOKED
+  /// A booking whose committed driver was online 30 min before the pickup:
+  /// the ride is theirs, they have not left yet. Only for a SCHEDULED ride.
+  DRIVER_ASSIGNED
   SEARCHING_DRIVER
   NO_DRIVER_FOUND
   DRIVER_EN_ROUTE
@@ -285,12 +294,23 @@ enum RideStatus {
   PASSENGER_NO_SHOW
 }
 
+/// What a ride is, fixed at the estimate: a booked ride that started stays
+/// SCHEDULED. The status tells the step, the kind tells where its details
+/// are.
+enum RideKind {
+  /// Ordered for now.
+  IMMEDIATE
+  /// Booked in advance: its pickup time is in ride_schedules.
+  SCHEDULED
+}
+
 /// A ride estimated for a passenger, then maybe ordered. `status` tells which
 /// sub-table holds the details of its current step: the database does not
 /// check that they match, RideEntity does.
 model Ride {
   id                     String     @id
   passengerId            String
+  kind                   RideKind
   status                 RideStatus
   /// The address of the passenger's position, looked up at the estimate.
   originName             String
@@ -314,8 +334,94 @@ model Ride {
   offers        RideOffer[]
   noDriverFound RideNoDriverFound?
   cancellation  RideCancellation?
+  schedule      RideSchedule?
 
   @@map("rides")
+}
+
+/// A ride booked in advance, from its estimate on. Only for SCHEDULED rides:
+/// RideEntity checks it, the database cannot.
+model RideSchedule {
+  rideId    String   @id
+  /// When the passenger wants to be picked up.
+  pickupAt  DateTime
+  /// The road from the pickup to the destination, for the drivers who look
+  /// at the booking.
+  tripMeters Int
+
+  ride        Ride                     @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  driver      RideScheduleDriver?
+  withdrawals RideScheduleWithdrawal[]
+  refusals    RideScheduleRefusal[]
+  alerts      RideScheduleAlert[]
+
+  /// The task of each minute looks for the bookings due soon.
+  @@index([pickupAt])
+  @@map("ride_schedules")
+}
+
+/// The driver committed to a booking now. rideId as key: one at most.
+model RideScheduleDriver {
+  rideId     String   @id
+  driverId   String
+  acceptedAt DateTime
+
+  schedule RideSchedule @relation(fields: [rideId], references: [rideId], onDelete: Cascade)
+  driver   Driver       @relation(fields: [driverId], references: [userId])
+
+  /// The driver's commitments: "Acceptées" tab and the 1 h gap rule.
+  @@index([driverId])
+  @@map("ride_schedule_drivers")
+}
+
+/// A driver who committed to a booking, then withdrew. Moved here from
+/// ride_schedule_drivers in the same transaction.
+model RideScheduleWithdrawal {
+  id          String   @id
+  rideId      String
+  driverId    String
+  acceptedAt  DateTime
+  withdrawnAt DateTime
+
+  schedule RideSchedule @relation(fields: [rideId], references: [rideId], onDelete: Cascade)
+  driver   Driver       @relation(fields: [driverId], references: [userId])
+
+  @@map("ride_schedule_withdrawals")
+}
+
+/// A driver who does not want a booking: it leaves their list, and it is
+/// never offered to them, not even at its departure. Nobody else is told.
+model RideScheduleRefusal {
+  rideId    String
+  driverId  String
+  refusedAt DateTime
+
+  schedule RideSchedule @relation(fields: [rideId], references: [rideId], onDelete: Cascade)
+  driver   Driver       @relation(fields: [driverId], references: [userId])
+
+  /// A driver refuses a booking once.
+  @@id([rideId, driverId])
+  @@map("ride_schedule_refusals")
+}
+
+/// A notification sent once to the driver committed to a booking.
+enum RideScheduleAlertKind {
+  /// 45 min before the pickup: go online before the deadline.
+  GO_ONLINE
+}
+
+/// Each notification to the committed driver is sent once.
+model RideScheduleAlert {
+  rideId   String
+  driverId String
+  kind     RideScheduleAlertKind
+  sentAt   DateTime
+
+  schedule RideSchedule @relation(fields: [rideId], references: [rideId], onDelete: Cascade)
+  driver   Driver       @relation(fields: [driverId], references: [userId])
+
+  @@id([rideId, driverId, kind])
+  @@map("ride_schedule_alerts")
 }
 
 /// The passenger cancelled the ride, for good: while a driver was searched,

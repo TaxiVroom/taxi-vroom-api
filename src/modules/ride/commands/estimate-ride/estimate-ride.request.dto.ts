@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  IsISO8601,
   IsNumber,
+  IsOptional,
   IsString,
   Max,
   MaxLength,
@@ -38,4 +40,15 @@ export class EstimateRideRequestDto {
   @Min(-180)
   @IsNumber()
   readonly destinationLongitude: number;
+
+  @ApiProperty({
+    example: '2026-11-04T04:00:00.000Z',
+    required: false,
+    description:
+      'To book for later, from 30 minutes to 30 days ahead. Without it, ' +
+      'the ride is for now.',
+  })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  readonly pickupAt?: string;
 }

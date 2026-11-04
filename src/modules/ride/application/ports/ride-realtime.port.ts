@@ -5,6 +5,7 @@ import {
 import {
   EstimatedPrice,
   RideCompletion,
+  RideKind,
   RidePickup,
   RidePlace,
   RideStatus,
@@ -19,6 +20,9 @@ export interface RideOfferNotice {
   destination: RidePlace;
   estimatedPrice: EstimatedPrice;
   passengerFirstName: string;
+  kind: RideKind;
+  // Only for a booking: when the passenger is waiting for the taxi.
+  pickupAt?: Date;
 }
 
 // What the passenger and their driver see of the ride.

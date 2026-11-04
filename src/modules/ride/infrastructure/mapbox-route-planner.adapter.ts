@@ -27,12 +27,36 @@ export class MapboxRoutePlannerAdapter implements RoutePlannerPort {
     pickup: RoutePoint,
     destination: RoutePoint,
   ): Promise<TaxiRoute> {
-    const coordinates = [taxi, pickup, destination]
+    const [approach, trip] = await this.directions([taxi, pickup, destination]);
+    return { approach: this.segments(approach), trip: this.segments(trip) };
+  }
+
+  // depart_at: the duration then comes from the usual traffic at that time,
+  // mixed with the live one only close to now. Format YYYY-MM-DDThh:mm:ssZ,
+  // without milliseconds.
+  async planTrip(
+    pickup: RoutePoint,
+    destination: RoutePoint,
+    departsAt: Date,
+  ): Promise<RouteSegment[]> {
+    const departAt = departsAt.toISOString().replace(/\.\d{3}Z$/, 'Z');
+    const [trip] = await this.directions([pickup, destination], {
+      depart_at: departAt,
+    });
+    return this.segments(trip);
+  }
+
+  private async directions(
+    points: RoutePoint[],
+    extraParams: Record<string, string> = {},
+  ): Promise<MapboxLeg[]> {
+    const coordinates = points
       .map((point) => `${point.longitude},${point.latitude}`)
       .join(';');
     const params = new URLSearchParams({
       annotations: 'distance,duration',
       overview: 'full',
+      ...extraParams,
       access_token: this.configService.get('MAPBOX_ACCESS_TOKEN'),
     });
     const response = await fetch(
@@ -42,8 +66,7 @@ export class MapboxRoutePlannerAdapter implements RoutePlannerPort {
     if (!response.ok || body.code !== 'Ok' || body.routes.length === 0) {
       throw new Error(`Mapbox Directions failed: ${body.code}`);
     }
-    const [approach, trip] = body.routes[0].legs;
-    return { approach: this.segments(approach), trip: this.segments(trip) };
+    return body.routes[0].legs;
   }
 
   private segments({ annotation }: MapboxLeg): RouteSegment[] {

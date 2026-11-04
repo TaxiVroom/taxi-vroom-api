@@ -46,6 +46,23 @@ import { RateRideService } from './commands/rate-ride/rate-ride.service';
 import { FindCurrentRideHttpController } from './queries/find-current-ride/find-current-ride.http.controller';
 import { FindCurrentRideQueryHandler } from './queries/find-current-ride/find-current-ride.query-handler';
 import { RideNotifier } from './application/ride-notifier';
+import { BookingStarter } from './application/booking-starter';
+import { BookRideHttpController } from './commands/book-ride/book-ride.http.controller';
+import { BookRideService } from './commands/book-ride/book-ride.service';
+import { AcceptBookingHttpController } from './commands/accept-booking/accept-booking.http.controller';
+import { AcceptBookingService } from './commands/accept-booking/accept-booking.service';
+import { WithdrawFromBookingHttpController } from './commands/withdraw-from-booking/withdraw-from-booking.http.controller';
+import { WithdrawFromBookingService } from './commands/withdraw-from-booking/withdraw-from-booking.service';
+import { RefuseBookingHttpController } from './commands/refuse-booking/refuse-booking.http.controller';
+import { RefuseBookingService } from './commands/refuse-booking/refuse-booking.service';
+import { DepartForBookingHttpController } from './commands/depart-for-booking/depart-for-booking.http.controller';
+import { DepartForBookingService } from './commands/depart-for-booking/depart-for-booking.service';
+import { FindMyBookingsHttpController } from './queries/find-my-bookings/find-my-bookings.http.controller';
+import { FindMyBookingsQueryHandler } from './queries/find-my-bookings/find-my-bookings.query-handler';
+import { FindAvailableBookingsHttpController } from './queries/find-available-bookings/find-available-bookings.http.controller';
+import { FindAvailableBookingsQueryHandler } from './queries/find-available-bookings/find-available-bookings.query-handler';
+import { FindAcceptedBookingsHttpController } from './queries/find-accepted-bookings/find-accepted-bookings.http.controller';
+import { FindAcceptedBookingsQueryHandler } from './queries/find-accepted-bookings/find-accepted-bookings.query-handler';
 import { FindMyRidesHttpController } from './queries/find-my-rides/find-my-rides.http.controller';
 import { FindMyRidesQueryHandler } from './queries/find-my-rides/find-my-rides.query-handler';
 import { GetBoardingCodeHttpController } from './queries/get-boarding-code/get-boarding-code.http.controller';
@@ -66,6 +83,14 @@ const httpControllers = [
   FindCurrentRideHttpController,
   FindMyRidesHttpController,
   GetBoardingCodeHttpController,
+  BookRideHttpController,
+  AcceptBookingHttpController,
+  WithdrawFromBookingHttpController,
+  RefuseBookingHttpController,
+  DepartForBookingHttpController,
+  FindMyBookingsHttpController,
+  FindAvailableBookingsHttpController,
+  FindAcceptedBookingsHttpController,
 ];
 
 const commandHandlers: Provider[] = [
@@ -81,12 +106,20 @@ const commandHandlers: Provider[] = [
   WithdrawFromRideService,
   ReportNoShowService,
   RateRideService,
+  BookRideService,
+  AcceptBookingService,
+  WithdrawFromBookingService,
+  RefuseBookingService,
+  DepartForBookingService,
 ];
 
 const queryHandlers: Provider[] = [
   FindCurrentRideQueryHandler,
   FindMyRidesQueryHandler,
   GetBoardingCodeQueryHandler,
+  FindMyBookingsQueryHandler,
+  FindAvailableBookingsQueryHandler,
+  FindAcceptedBookingsQueryHandler,
 ];
 
 const applicationServices: Provider[] = [
@@ -94,6 +127,7 @@ const applicationServices: Provider[] = [
   RideOfferTimer,
   RidePublisher,
   RideNotifier,
+  BookingStarter,
 ];
 
 const mappers: Provider[] = [RideMapper];

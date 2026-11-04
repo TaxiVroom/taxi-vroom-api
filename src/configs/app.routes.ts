@@ -11,6 +11,7 @@ const passengersRoot = 'passengers';
 const registrationDocumentTypesRoot = 'registration-document-types';
 const adminRoot = 'admin';
 const ridesRoot = 'rides';
+const bookingsRoot = 'bookings';
 
 // Api Versions
 const v1 = 'v1';
@@ -44,10 +45,20 @@ export const routesV1 = {
   admin: {
     validateRegistrationDocument: `${adminRoot}/registration-documents/:documentId/validate`,
   },
+  booking: {
+    available: `${bookingsRoot}/available`,
+    accepted: `${bookingsRoot}/accepted`,
+  },
   ride: {
     root: ridesRoot,
     current: `${ridesRoot}/current`,
+    booked: `${ridesRoot}/booked`,
     request: `${ridesRoot}/:rideId/request`,
+    book: `${ridesRoot}/:rideId/book`,
+    acceptBooking: `${ridesRoot}/:rideId/booking/accept`,
+    withdrawFromBooking: `${ridesRoot}/:rideId/booking/withdraw`,
+    refuseBooking: `${ridesRoot}/:rideId/booking/refuse`,
+    departForBooking: `${ridesRoot}/:rideId/booking/depart`,
     accept: `${ridesRoot}/:rideId/accept`,
     decline: `${ridesRoot}/:rideId/decline`,
     arrive: `${ridesRoot}/:rideId/arrive`,

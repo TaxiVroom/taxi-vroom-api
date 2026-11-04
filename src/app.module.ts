@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { CqrsModule } from '@nestjs/cqrs';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { UserModule } from '@modules/user/user.module';
 import { WalletModule } from '@modules/wallet/wallet.module';
 import { RequestContextModule } from 'nestjs-request-context';
@@ -35,6 +36,8 @@ const interceptors = [
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }), // Must be first — loads .env and validates all required variables before any other module boots.
     EventEmitterModule.forRoot(),
+    // Once, here only: each other forRoot() would run the tasks again.
+    ScheduleModule.forRoot(),
     RequestContextModule,
     CqrsModule,
     GraphQLModule.forRoot<ApolloDriverConfig>({

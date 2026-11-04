@@ -12,6 +12,7 @@ import {
   RideMapper,
   RideOfferModel,
   RideRecord,
+  RideScheduleModel,
 } from '../ride.mapper';
 import { RideEntity } from '../domain/ride.entity';
 import {
@@ -60,6 +61,9 @@ const withSubTables = {
   },
   noDriverFound: true,
   cancellation: true,
+  schedule: {
+    include: { driver: true, withdrawals: true, refusals: true, alerts: true },
+  },
 };
 
 const personFields = { firstName: true, lastName: true, phone: true };
@@ -89,7 +93,7 @@ export class RideRepository
 
   async save(ride: RideEntity): Promise<void> {
     ride.validate();
-    const { offers, noDriverFound, cancellation, ...row } =
+    const { offers, noDriverFound, cancellation, schedule, ...row } =
       this.mapper.toPersistence(ride);
     try {
       await this.model.upsert({
@@ -97,6 +101,7 @@ export class RideRepository
         create: row,
         update: row,
       });
+      if (schedule) await this.saveSchedule(row.id, schedule);
       // In the order they were made: an answered offer is saved before the
       // next pending one, as one pending offer at most is allowed.
       for (const offer of offers) await this.saveOffer(offer);
@@ -123,9 +128,14 @@ export class RideRepository
     await ride.publishEvents(this.logger, this.eventEmitter);
   }
 
-  async findBusyDriverIds(driverIds: string[]): Promise<Set<string>> {
+  async findBusyDriverIds(
+    driverIds: string[],
+    exceptRideId?: string,
+  ): Promise<Set<string>> {
+    const otherRide = exceptRideId ? { rideId: { not: exceptRideId } } : {};
     const offers = await this.client.rideOffer.findMany({
       where: {
+        ...otherRide,
         driverId: { in: driverIds },
         OR: [
           { status: RideOfferStatus.pending },
@@ -137,7 +147,97 @@ export class RideRepository
       },
       select: { driverId: true },
     });
-    return new Set(offers.map((offer: { driverId: string }) => offer.driverId));
+    // Waiting to leave for their booking: no other ride meanwhile.
+    const assigned = await this.client.rideScheduleDriver.findMany({
+      where: {
+        ...otherRide,
+        driverId: { in: driverIds },
+        schedule: { ride: { status: RideStatus.driverAssigned } },
+      },
+      select: { driverId: true },
+    });
+    return new Set(
+      [...offers, ...assigned].map((row: { driverId: string }) => row.driverId),
+    );
+  }
+
+  async findCommittedPickupTimes(
+    driverId: string,
+    exceptRideId: string,
+  ): Promise<Date[]> {
+    const schedules = await this.client.rideSchedule.findMany({
+      where: {
+        rideId: { not: exceptRideId },
+        driver: { driverId },
+        ride: {
+          status: { in: [RideStatus.booked, RideStatus.driverAssigned] },
+        },
+      },
+      select: { pickupAt: true },
+    });
+    return schedules.map((s: { pickupAt: Date }) => s.pickupAt);
+  }
+
+  // Raw SQL: Prisma cannot lock rows. Locked until the transaction ends, and
+  // skipped by another server running the same task.
+  // https://www.postgresql.org/docs/current/sql-select.html
+  async lockNextDueBooking(leadMinutes: number): Promise<Option<RideEntity>> {
+    const rows: { id: string }[] = await this.client.$queryRaw`
+      SELECT r.id
+      FROM rides r
+      JOIN ride_schedules s ON s."rideId" = r.id
+      WHERE r.status = 'BOOKED'
+        AND s."pickupAt" <= (now() AT TIME ZONE 'UTC') + make_interval(mins => ${leadMinutes}::int)
+      ORDER BY s."pickupAt"
+      LIMIT 1
+      FOR UPDATE OF r SKIP LOCKED`;
+    return rows.length > 0 ? this.findOneById(rows[0].id) : None;
+  }
+
+  // Same lock, for the booking whose committed driver was not reminded yet.
+  async lockNextBookingToRemind(
+    leadMinutes: number,
+  ): Promise<Option<RideEntity>> {
+    const rows: { id: string }[] = await this.client.$queryRaw`
+      SELECT r.id
+      FROM rides r
+      JOIN ride_schedules s ON s."rideId" = r.id
+      JOIN ride_schedule_drivers d ON d."rideId" = r.id
+      WHERE r.status = 'BOOKED'
+        AND s."pickupAt" <= (now() AT TIME ZONE 'UTC') + make_interval(mins => ${leadMinutes}::int)
+        AND NOT EXISTS (
+          SELECT 1 FROM ride_schedule_alerts a
+          WHERE a."rideId" = r.id AND a."driverId" = d."driverId" AND a.kind = 'GO_ONLINE'
+        )
+      ORDER BY s."pickupAt"
+      LIMIT 1
+      FOR UPDATE OF r SKIP LOCKED`;
+    return rows.length > 0 ? this.findOneById(rows[0].id) : None;
+  }
+
+  // Same lock, for the next booking still assigned leadMinutes or less before
+  // its pickup: its driver did not leave in time.
+  async lockNextBookingNotLeft(
+    leadMinutes: number,
+  ): Promise<Option<RideEntity>> {
+    const rows: { id: string }[] = await this.client.$queryRaw`
+      SELECT r.id
+      FROM rides r
+      JOIN ride_schedules s ON s."rideId" = r.id
+      WHERE r.status = 'DRIVER_ASSIGNED'
+        AND s."pickupAt" <= (now() AT TIME ZONE 'UTC') + make_interval(mins => ${leadMinutes}::int)
+      ORDER BY s."pickupAt"
+      LIMIT 1
+      FOR UPDATE OF r SKIP LOCKED`;
+    return rows.length > 0 ? this.findOneById(rows[0].id) : None;
+  }
+
+  // Waits for the lock: "Je pars" and the task of each minute change the
+  // same booking one after the other.
+  async lockOneById(id: string): Promise<Option<RideEntity>> {
+    const rows: { id: string }[] = await this.client.$queryRaw`
+      SELECT id FROM rides WHERE id = ${id} FOR UPDATE`;
+    return rows.length > 0 ? this.findOneById(id) : None;
   }
 
   async findParticipants(rideId: string): Promise<RideParticipants> {
@@ -206,6 +306,55 @@ export class RideRepository
       nightEndMinute: row.nightEndMinute,
       holidayZone: row.holidayZone as HolidayZone,
     });
+  }
+
+  // The committed driver is written once, or removed; a withdrawal is written
+  // once.
+  private async saveSchedule(
+    rideId: string,
+    {
+      pickupAt,
+      tripMeters,
+      driver,
+      withdrawals,
+      refusals,
+      alerts,
+    }: RideScheduleModel,
+  ): Promise<void> {
+    await this.client.rideSchedule.upsert({
+      where: { rideId },
+      create: { rideId, pickupAt, tripMeters },
+      update: {},
+    });
+    // One query each: the rows already saved are skipped, a refusal or a
+    // withdrawal never changes.
+    // https://www.prisma.io/docs/orm/v7/reference/prisma-client-reference
+    await this.client.rideScheduleRefusal.createMany({
+      data: refusals.map((refusal) => ({ rideId, ...refusal })),
+      skipDuplicates: true,
+    });
+    await this.client.rideScheduleWithdrawal.createMany({
+      data: withdrawals.map((withdrawal) => ({ rideId, ...withdrawal })),
+      skipDuplicates: true,
+    });
+    await this.client.rideScheduleAlert.createMany({
+      data: alerts.map((alert) => ({ rideId, ...alert })),
+      skipDuplicates: true,
+    });
+    if (driver) {
+      const saved = await this.client.rideScheduleDriver.findUnique({
+        where: { rideId },
+      });
+      // Create, not upsert: when two drivers accept at once, the key lets
+      // one through and the other gets a ConflictException.
+      if (!saved) {
+        await this.client.rideScheduleDriver.create({
+          data: { rideId, ...driver },
+        });
+      }
+    } else {
+      await this.client.rideScheduleDriver.deleteMany({ where: { rideId } });
+    }
   }
 
   private async saveOffer(offer: RideOfferModel): Promise<void> {

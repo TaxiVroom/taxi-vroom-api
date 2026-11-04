@@ -157,3 +157,48 @@ export class BoardingCodeLockedError extends ExceptionBase {
     super(BoardingCodeLockedError.message, cause, metadata);
   }
 }
+
+// A booking is from 30 min to 30 days ahead, in slots the app offers.
+export class RidePickupTimeNotBookableError extends ExceptionBase {
+  static readonly message = 'A ride is booked from 30 minutes to 30 days ahead';
+
+  readonly code = 'RIDE.PICKUP_TIME_NOT_BOOKABLE';
+
+  constructor(cause?: Error, metadata?: unknown) {
+    super(RidePickupTimeNotBookableError.message, cause, metadata);
+  }
+}
+
+// Another driver committed to the booking first.
+export class RideBookingTakenError extends ExceptionBase {
+  static readonly message = 'Another driver already took this booking';
+
+  readonly code = 'RIDE.BOOKING_TAKEN';
+
+  constructor(cause?: Error, metadata?: unknown) {
+    super(RideBookingTakenError.message, cause, metadata);
+  }
+}
+
+// The driver could not be on time for both pickups.
+export class RideBookingOverlapError extends ExceptionBase {
+  static readonly message =
+    'Another booking of this driver is less than an hour away';
+
+  readonly code = 'RIDE.BOOKING_OVERLAP';
+
+  constructor(cause?: Error, metadata?: unknown) {
+    super(RideBookingOverlapError.message, cause, metadata);
+  }
+}
+
+// The driver leaves for their booking while still driving another ride.
+export class RideDriverBusyError extends ExceptionBase {
+  static readonly message = 'The driver is still on another ride';
+
+  readonly code = 'RIDE.DRIVER_BUSY';
+
+  constructor(cause?: Error, metadata?: unknown) {
+    super(RideDriverBusyError.message, cause, metadata);
+  }
+}

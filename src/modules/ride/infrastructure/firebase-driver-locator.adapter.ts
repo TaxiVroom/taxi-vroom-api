@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { getDatabase } from 'firebase-admin/database';
 import { geohashQueryBounds } from 'geofire-common';
+import { None, Option, Some } from 'oxide.ts';
 import {
   DriverLocatorPort,
   OnlineDriver,
@@ -38,5 +39,19 @@ export class FirebaseDriverLocatorAdapter implements DriverLocatorPort {
       });
     }
     return found;
+  }
+
+  // Removed by Firebase when the driver's app disconnects.
+  async findOnlineDriver(driverId: string): Promise<Option<OnlineDriver>> {
+    const snapshot = await getDatabase()
+      .ref(`drivers/${driverId}`)
+      .once('value');
+    if (!snapshot.exists()) return None;
+    const value = snapshot.val();
+    return Some({
+      driverId,
+      latitude: value.latitude,
+      longitude: value.longitude,
+    });
   }
 }

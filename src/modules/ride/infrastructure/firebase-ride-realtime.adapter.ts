@@ -14,15 +14,20 @@ import {
 @Injectable()
 export class FirebaseRideRealtimeAdapter implements RideRealtimePort {
   async publishOffer(offer: RideOfferNotice): Promise<void> {
-    await getDatabase().ref(`rideOffers/${offer.driverId}`).set({
-      rideId: offer.rideId,
-      offeredAt: offer.offeredAt.getTime(),
-      pickup: offer.pickup,
-      destination: offer.destination,
-      estimatedPriceMinCents: offer.estimatedPrice.minCents,
-      estimatedPriceMaxCents: offer.estimatedPrice.maxCents,
-      passengerFirstName: offer.passengerFirstName,
-    });
+    await getDatabase()
+      .ref(`rideOffers/${offer.driverId}`)
+      .set({
+        rideId: offer.rideId,
+        offeredAt: offer.offeredAt.getTime(),
+        pickup: offer.pickup,
+        destination: offer.destination,
+        estimatedPriceMinCents: offer.estimatedPrice.minCents,
+        estimatedPriceMaxCents: offer.estimatedPrice.maxCents,
+        passengerFirstName: offer.passengerFirstName,
+        kind: offer.kind,
+        // Absent for a ride now: the database keeps no null.
+        ...(offer.pickupAt && { pickupAt: offer.pickupAt.getTime() }),
+      });
   }
 
   async withdrawOffer(driverId: string): Promise<void> {

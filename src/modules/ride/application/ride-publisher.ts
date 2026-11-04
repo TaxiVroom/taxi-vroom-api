@@ -46,6 +46,8 @@ export class RidePublisher {
       destination: props.destination,
       estimatedPrice: props.estimatedPrice,
       passengerFirstName: participants.passenger.firstName,
+      kind: ride.kind,
+      pickupAt: ride.schedule?.pickupAt,
     });
   }
 }

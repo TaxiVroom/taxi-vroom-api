@@ -7,7 +7,7 @@ import {
   RideNotOwnedByPassengerError,
   RideWrongStepError,
 } from '@modules/ride/domain/ride.errors';
-import { PendingRideOffer } from '@modules/ride/domain/ride.types';
+import { PendingRideOffer, RideStatus } from '@modules/ride/domain/ride.types';
 import { RideRepositoryPort } from '@modules/ride/database/ride.repository.port';
 import { RIDE_REALTIME, RIDE_REPOSITORY } from '@modules/ride/ride.di-tokens';
 import { RideRealtimePort } from '@modules/ride/application/ports/ride-realtime.port';
@@ -26,7 +26,13 @@ type Cancelled = {
   ride: RideEntity;
   pendingOffer: PendingRideOffer | undefined;
   driverId: string | undefined;
+  // The driver committed to a booking they had not left for yet.
+  scheduledDriverId: string | undefined;
+  // Hidden from the free taxis since the booking's deadline.
+  wasAssigned: boolean;
 };
+
+const notLeftYetStatuses = [RideStatus.booked, RideStatus.driverAssigned];
 
 @CommandHandler(CancelRideCommand)
 export class CancelRideService implements ICommandHandler {
@@ -44,7 +50,14 @@ export class CancelRideService implements ICommandHandler {
     const result = await this.rideRepo.transaction(() => this.cancel(command));
     if (result.isErr()) return Err(result.unwrapErr());
 
-    const { ride, pendingOffer, driverId } = result.unwrap();
+    const { ride, pendingOffer, driverId, scheduledDriverId, wasAssigned } =
+      result.unwrap();
+    if (scheduledDriverId) {
+      if (wasAssigned)
+        await this.realtime.markDriverAvailable(scheduledDriverId);
+      await this.notifier.bookingCancelled(ride, scheduledDriverId);
+      return Ok(undefined);
+    }
     // The driver asked no longer has to answer.
     if (pendingOffer) {
       this.offerTimer.stop(pendingOffer.id);
@@ -66,10 +79,14 @@ export class CancelRideService implements ICommandHandler {
 
     const ride = found.unwrap();
     const { pendingOffer, driverId } = ride;
+    const wasAssigned = ride.status === RideStatus.driverAssigned;
+    const scheduledDriverId = notLeftYetStatuses.includes(ride.status)
+      ? ride.scheduledDriverId
+      : undefined;
     const cancelled = ride.cancel(command.passengerId, new Date());
     if (cancelled.isErr()) return Err(cancelled.unwrapErr());
 
     await this.rideRepo.save(ride);
-    return Ok({ ride, pendingOffer, driverId });
+    return Ok({ ride, pendingOffer, driverId, scheduledDriverId, wasAssigned });
   }
 }

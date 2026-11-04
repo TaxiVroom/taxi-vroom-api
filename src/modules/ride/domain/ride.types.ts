@@ -2,6 +2,11 @@
 export enum RideStatus {
   // The price is shown to the passenger, the ride is not ordered yet.
   estimated = 'ESTIMATED',
+  // Booked in advance, waiting for its departure.
+  booked = 'BOOKED',
+  // A booking whose committed driver was online at its deadline: the ride is
+  // theirs, they have not left yet.
+  driverAssigned = 'DRIVER_ASSIGNED',
   searchingDriver = 'SEARCHING_DRIVER',
   noDriverFound = 'NO_DRIVER_FOUND',
   driverEnRoute = 'DRIVER_EN_ROUTE',
@@ -55,6 +60,8 @@ export interface RideRating {
 // written. The steps after the acceptance belong to the accepted offer.
 export type RideStep =
   | { status: RideStatus.estimated }
+  | { status: RideStatus.booked }
+  | { status: RideStatus.driverAssigned }
   | { status: RideStatus.searchingDriver }
   | { status: RideStatus.noDriverFound; noDriverFoundAt: Date }
   | { status: RideStatus.driverEnRoute; boardingCode: BoardingCode }
@@ -185,8 +192,79 @@ export interface TaxiRoute {
   trip: RouteSegment[];
 }
 
+// What a ride is, fixed at the estimate: a booked ride that started stays
+// scheduled.
+export enum RideKind {
+  immediate = 'IMMEDIATE',
+  scheduled = 'SCHEDULED',
+}
+
+// The driver committed to a booking, before it starts.
+export interface ScheduleDriver {
+  driverId: string;
+  acceptedAt: Date;
+}
+
+// A driver who committed to a booking, then gave it up.
+export interface ScheduleWithdrawal {
+  id: string;
+  driverId: string;
+  acceptedAt: Date;
+  withdrawnAt: Date;
+}
+
+// A driver who does not want a booking.
+export interface ScheduleRefusal {
+  driverId: string;
+  refusedAt: Date;
+}
+
+// A notification sent once to the driver committed to a booking.
+export enum ScheduleAlertKind {
+  // Before the deadline: go online.
+  goOnline = 'GO_ONLINE',
+}
+
+// Each alert is sent once to a driver for a booking.
+export interface ScheduleAlert {
+  driverId: string;
+  kind: ScheduleAlertKind;
+  sentAt: Date;
+}
+
+// A ride booked in advance.
+export interface RideSchedule {
+  pickupAt: Date;
+  // The road from the pickup to the destination, shown to the drivers.
+  tripMeters: number;
+  // Null while no driver committed to it.
+  driver: ScheduleDriver | null;
+  // In the order they happened.
+  withdrawals: ScheduleWithdrawal[];
+  // Never offered to these drivers.
+  refusals: ScheduleRefusal[];
+  alerts: ScheduleAlert[];
+}
+
+// What became of a booking at its deadline, 30 min before the pickup.
+export enum BookingStart {
+  // Its committed driver is online: the ride is theirs.
+  assigned = 'ASSIGNED',
+  // Nobody committed to it: a driver is searched.
+  searching = 'SEARCHING',
+  // Its committed driver is offline: removed, another driver is searched.
+  committedDriverRemoved = 'COMMITTED_DRIVER_REMOVED',
+}
+
+// Ordered for now, or booked for later with its schedule: a scheduled ride
+// without one cannot be written.
+export type RideTiming =
+  | { kind: RideKind.immediate }
+  | { kind: RideKind.scheduled; schedule: RideSchedule };
+
 export interface RideProps {
   passengerId: string;
+  timing: RideTiming;
   origin: RidePickup;
   destination: RidePlace;
   estimatedPrice: EstimatedPrice;
@@ -204,6 +282,18 @@ export interface EstimateRideProps {
   tariff: TaxiTariff;
   route: TaxiRoute;
   // Days as "YYYY-MM-DD", in the département's calendar.
+  publicHolidays: Set<string>;
+  now: Date;
+}
+
+export interface EstimateBookedRideProps {
+  passengerId: string;
+  origin: RidePickup;
+  destination: RidePlace;
+  tariff: TaxiTariff;
+  // From the pickup to the destination, timed for the pickup time.
+  trip: RouteSegment[];
+  pickupAt: Date;
   publicHolidays: Set<string>;
   now: Date;
 }

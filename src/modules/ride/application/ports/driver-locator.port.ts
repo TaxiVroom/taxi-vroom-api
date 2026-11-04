@@ -1,3 +1,5 @@
+import { Option } from 'oxide.ts';
+
 // A driver online, at the last position their app sent.
 export interface OnlineDriver {
   driverId: string;
@@ -13,4 +15,7 @@ export interface DriverLocatorPort {
     longitude: number,
     radiusMeters: number,
   ): Promise<OnlineDriver[]>;
+
+  // This driver, if online, at their last position.
+  findOnlineDriver(driverId: string): Promise<Option<OnlineDriver>>;
 }
