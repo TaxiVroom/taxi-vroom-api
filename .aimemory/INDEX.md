@@ -14,4 +14,4 @@ gaps: unprotected user routes, suspension, document rejection: see hyp
 rating: passenger rating and ride history shipped, spec docs/specs/notation-et-historique.md
 push: shipped on Android, iOS waits for hardware, spec docs/specs/notifications-push.md
 bookings: advance bookings shipped, spec docs/specs/reservations-a-l-avance.md
-next: to choose with the user
+next: to choose with the user; ideas noted for later in docs/a-faire.md
