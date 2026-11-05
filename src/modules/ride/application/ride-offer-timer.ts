@@ -1,5 +1,4 @@
 import {
-  Inject,
   Injectable,
   Logger,
   OnApplicationBootstrap,
@@ -10,9 +9,8 @@ import { Interval } from '@nestjs/schedule';
 import { subMilliseconds } from 'date-fns';
 import { RequestContext } from 'nestjs-request-context';
 import { RideEntity } from '@modules/ride/domain/ride.entity';
+import { ExpireOverdueOffersCommand } from '@modules/ride/commands/expire-overdue-offers/expire-overdue-offers.command';
 import { ExpireRideOfferCommand } from '@modules/ride/commands/expire-ride-offer/expire-ride-offer.command';
-import { RideRepositoryPort } from '@modules/ride/database/ride.repository.port';
-import { RIDE_REPOSITORY } from '@modules/ride/ride.di-tokens';
 
 const everyMinuteMs = 60_000;
 
@@ -26,10 +24,7 @@ export class RideOfferTimer implements OnApplicationBootstrap, OnModuleDestroy {
   private readonly logger = new Logger(RideOfferTimer.name);
   private readonly timers = new Map<string, NodeJS.Timeout>();
 
-  constructor(
-    private readonly commandBus: CommandBus,
-    @Inject(RIDE_REPOSITORY) private readonly rideRepo: RideRepositoryPort,
-  ) {}
+  constructor(private readonly commandBus: CommandBus) {}
 
   start(rideId: string, offerId: string): void {
     const timer = setTimeout(
@@ -59,18 +54,20 @@ export class RideOfferTimer implements OnApplicationBootstrap, OnModuleDestroy {
     this.timers.forEach((timer) => clearTimeout(timer));
   }
 
-  // An offer also expired by its timer meanwhile is simply not pending
-  // anymore: the command does nothing.
+  // All at once: the rides are loaded together, not one per offer. An offer
+  // also expired by its timer meanwhile is simply not pending anymore.
   private async expireOverdueOffers(): Promise<void> {
     const context = new RequestContext({ requestId: 'overdue-offers' }, {});
     await RequestContext.cls.run(context, async () => {
       try {
-        const overdue = await this.rideRepo.findOverdueOffers(
-          subMilliseconds(new Date(), RideEntity.offerResponseTimeMs),
+        await this.commandBus.execute(
+          new ExpireOverdueOffersCommand({
+            offeredBefore: subMilliseconds(
+              new Date(),
+              RideEntity.offerResponseTimeMs,
+            ),
+          }),
         );
-        for (const { rideId, offerId } of overdue) {
-          await this.expire(rideId, offerId);
-        }
       } catch (error) {
         this.logger.error('Overdue offers not expired', error);
       }

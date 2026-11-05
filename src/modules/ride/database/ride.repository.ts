@@ -24,7 +24,6 @@ import {
   TaxiTariff,
 } from '../domain/ride.types';
 import {
-  OverdueOffer,
   RideDriverStats,
   RideParticipants,
   RideRepositoryPort,
@@ -129,17 +128,24 @@ export class RideRepository
     await ride.publishEvents(this.logger, this.eventEmitter);
   }
 
-  // One query for all of them.
-  async findOverdueOffers(offeredBefore: Date): Promise<OverdueOffer[]> {
-    const offers: { id: string; rideId: string }[] =
-      await this.client.rideOffer.findMany({
-        where: {
-          status: RideOfferStatus.pending,
-          offeredAt: { lt: offeredBefore },
-        },
-        select: { id: true, rideId: true },
-      });
-    return offers.map((offer) => ({ rideId: offer.rideId, offerId: offer.id }));
+  // Two queries for all of them: the locked ids, then the rides. Raw SQL:
+  // Prisma cannot lock rows; FOR UPDATE is refused with DISTINCT, hence IN.
+  // https://www.postgresql.org/docs/current/sql-select.html
+  async lockRidesWithOverdueOffers(offeredBefore: Date): Promise<RideEntity[]> {
+    const rows: { id: string }[] = await this.client.$queryRaw`
+      SELECT r.id
+      FROM rides r
+      WHERE r.id IN (
+        SELECT o."rideId" FROM ride_offers o
+        WHERE o.status = 'PENDING' AND o."offeredAt" < ${offeredBefore}
+      )
+      FOR UPDATE OF r SKIP LOCKED`;
+    if (rows.length === 0) return [];
+    const records: RideRecord[] = await this.model.findMany({
+      where: { id: { in: rows.map((row) => row.id) } },
+      include: withSubTables,
+    });
+    return records.map((record) => this.mapper.toDomain(record));
   }
 
   async findBusyDriverIds(

@@ -29,6 +29,7 @@ import { AcceptRideOfferService } from './commands/accept-ride-offer/accept-ride
 import { DeclineRideOfferHttpController } from './commands/decline-ride-offer/decline-ride-offer.http.controller';
 import { DeclineRideOfferService } from './commands/decline-ride-offer/decline-ride-offer.service';
 import { ExpireRideOfferService } from './commands/expire-ride-offer/expire-ride-offer.service';
+import { ExpireOverdueOffersService } from './commands/expire-overdue-offers/expire-overdue-offers.service';
 import { ArriveAtPickupHttpController } from './commands/arrive-at-pickup/arrive-at-pickup.http.controller';
 import { ArriveAtPickupService } from './commands/arrive-at-pickup/arrive-at-pickup.service';
 import { StartRideHttpController } from './commands/start-ride/start-ride.http.controller';
@@ -99,6 +100,7 @@ const commandHandlers: Provider[] = [
   AcceptRideOfferService,
   DeclineRideOfferService,
   ExpireRideOfferService,
+  ExpireOverdueOffersService,
   ArriveAtPickupService,
   StartRideService,
   CompleteRideService,
