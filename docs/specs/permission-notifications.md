@@ -1,6 +1,6 @@
 # Permission des notifications
 
-> Statut : codée le 2026-11-05, non commitée. Pas testée sur un émulateur, par choix du user (étape 3).
+> Statut : codée et commitée le 2026-11-05. Pas testée sur un émulateur, par choix du user (étape 3).
 
 Concerne `taxi-vroom-mobile` seulement : l'API n'est pas touchée. La spec vit dans l'API, avec les autres.
 
@@ -176,7 +176,7 @@ Décision du user, 2026-11-05 : pas testée pour l'instant, la feature étant pe
 ### Fin de feature
 
 - [x] Mettre à jour `.aimemory` du dépôt mobile (`notificationPermissionOnce` dans `hyp.md`, corrigée dans le code mais non testée) et compresser `done.md`
-- [ ] Commiter quand le user le demande
+- [x] Commiter quand le user le demande
 
 ## Sources
 
