@@ -108,7 +108,7 @@ Aucune route nouvelle ni modifiée.
 
 - `NotificationPermissionRepository` dans `lib/core`, avec son implémentation sur `permission_handler` : lire l'état, demander, ouvrir les réglages ;
 - un cas d'usage, `EnsureNotificationPermissionUseCase`, qui contient la règle ci-dessus et renvoie l'issue : accordée, refusée, ou refusée définitivement ;
-- deux petits cas d'usage : lire l'état sans rien demander (onglet Compte), et ouvrir les réglages ;
+- trois petits cas d'usage : lire l'état sans rien demander (onglet Compte), ouvrir les réglages, et `EnableNotificationsUseCase` pour « Activer » (réglages ouverts si bloquée), testé en TDD ; `NotificationPermission.needsSettings` dit quand seuls les réglages peuvent aider. Corrigé le 2026-11-05 : ces deux règles étaient d'abord dans le bloc ;
 - un seul bloc, `NotificationPermissionBloc` (point 7), fourni dans `app.dart` au-dessus de `AuthNavigator` : événements « vérifier » (après une action, avec le besoin : suivi de la course, courses du chauffeur, rappel de réservation), « lire », « activer » (onglet Compte) et « ouvrir les réglages » ; l'état garde la permission et, après une vérification bloquée, le besoin à expliquer. Les pages le préviennent après une action réussie, par un `BlocListener`, comme « Je pars » passe de `DriverBookingsBloc` à `DriverFlowBloc` ; `TaxiChoiceBloc`, `DriverHomeBloc` et `DriverBookingsBloc` ne changent pas ;
 - `showMessageToast` avec un bouton d'action facultatif ;
 - la ligne « Notifications » des deux onglets Compte, à la place de l'interrupteur simulé.
@@ -126,7 +126,7 @@ Aucune.
 ### Limites connues
 
 - **iOS** : `permission_handler` demande la macro `PERMISSION_NOTIFICATIONS=1` dans le `post_install` du `Podfile` ([permission_handler 12.0.1](https://pub.dev/packages/permission_handler/versions/12.0.1)). Le dépôt n'a pas encore de `Podfile` : il est créé au premier build iOS, sur un Mac. À ajouter ce jour-là, sinon la demande ne fait rien sur iOS.
-- **L'ancien interrupteur simulé reste dans le modèle** : `notificationsEnabled` des comptes passager et chauffeur, son événement et son cas d'usage ne sont plus affichés ni appelés, mais pas encore supprimés (une vingtaine de fichiers, hors de cette feature).
+- **L'ancien interrupteur simulé** : supprimé le 2026-11-05, à la demande du user, sans spec (`notificationsEnabled` des comptes passager et chauffeur, leurs événements, `UpdateNotificationsUseCase` et `UpdateDriverNotificationsUseCase`).
 - **Notifications coupées par canal** : si la personne garde la permission mais coupe seulement le canal « rides » dans les réglages, l'app ne le voit pas.
 
 ## À valider

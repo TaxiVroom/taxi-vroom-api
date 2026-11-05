@@ -22,4 +22,4 @@ namedTypes|Never infer a type with Awaited, ReturnType, Parameters, InstanceType
 localInfer|Inside a function, let TS infer reduce and map from the initializer: no named accumulator type and no reduce<T> unless inference fails
 dateFns|HARD: date math and comparisons always use date-fns (addDays, differenceInMilliseconds, isAfter...), never millisecond arithmetic or getTime() comparisons. New code only: the user keeps the existing date code as it is, do not migrate it unasked
 commitStyle|Commit only when the user asks, in Conventional Commits
-noCompetitorNames|HARD: the app may follow the market's usual ways of working, but no competitor or other app is ever named in the repo (code, comments, specs, memory): state the rule and its business reason instead. User, 2026-11-04
+noCompetitorNames|HARD: the app may follow the market's usual ways of working, but no competitor is ever named in the repo (code, comments, specs, memory): state the rule and its business reason instead. A third-party app the app integrates with, like Google Maps or Waze, may be named. User, 2026-11-04, clarified 2026-11-05

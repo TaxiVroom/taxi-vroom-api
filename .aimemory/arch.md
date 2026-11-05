@@ -9,7 +9,7 @@ RideModule|mod|src/modules/ride/|estimate, dispatch, ride lifecycle @ltm:rideLif
 RideEntity|agg|src/modules/ride/domain/ride.entity.ts|every rule of the ride; steps are a discriminated union in ride.types.ts
 TaxiFare|mod|src/modules/ride/domain/taxi-fare.ts|estimateFare, isTariffOutdated @ltm:priceEstimate
 RideDispatcher|svc|src/modules/ride/application/ride-dispatcher.ts|offers to the next closest driver, 3 attempts on a race
-RideOfferTimer|svc|src/modules/ride/application/ride-offer-timer.ts|15 s timer in memory; at startup and every minute, expires the offers left pending in Postgres (findOverdueOffers), so a restart loses none, up to a minute late
+RideOfferTimer|svc|src/modules/ride/application/ride-offer-timer.ts|15 s timer in memory; at startup and every minute, dispatches ExpireOverdueOffersCommand, which locks all rides with an offer pending over 15 s in one query (FOR UPDATE SKIP LOCKED) and expires them, so a restart loses none, up to a minute late
 RidePublisher|svc|src/modules/ride/application/ride-publisher.ts|writes rides/ and rideOffers/ after commit
 RideNotifier|svc|src/modules/ride/application/ride-notifier.ts|the ride's pushes, through SendPushCommand, which never fails
 BookingStarter|svc|src/modules/ride/application/booking-starter.ts|each minute and at startup, one booking per transaction locked FOR UPDATE SKIP LOCKED: go-online reminder 45 min before pickup, deadline 30 min before (committed driver online → DRIVER_ASSIGNED, else removed + dispatcher), not left 10 min before → removed + dispatcher; fixed times only, no route computing; temporary until a job queue, spec reservations-a-l-avance.md
