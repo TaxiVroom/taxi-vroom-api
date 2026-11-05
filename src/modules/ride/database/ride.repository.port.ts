@@ -24,11 +24,20 @@ export interface RideParticipants {
   driver: RideDriver | null;
 }
 
+// An offer still waiting for an answer after its time was up.
+export interface OverdueOffer {
+  rideId: string;
+  offerId: string;
+}
+
 export interface RideRepositoryPort extends RepositoryPort<RideEntity> {
   // Writes the ride with all its sub-tables. Throws ConflictException when a
   // database constraint refuses it, e.g. a driver already proposed another
   // ride.
   save(ride: RideEntity): Promise<void>;
+
+  // The offers still pending that were made before this time.
+  findOverdueOffers(offeredBefore: Date): Promise<OverdueOffer[]>;
 
   // Among these drivers, those already proposed a ride, driving one, or
   // waiting to leave for their booking. exceptRideId: not counting that ride.

@@ -24,6 +24,7 @@ import {
   TaxiTariff,
 } from '../domain/ride.types';
 import {
+  OverdueOffer,
   RideDriverStats,
   RideParticipants,
   RideRepositoryPort,
@@ -126,6 +127,19 @@ export class RideRepository
       throw error;
     }
     await ride.publishEvents(this.logger, this.eventEmitter);
+  }
+
+  // One query for all of them.
+  async findOverdueOffers(offeredBefore: Date): Promise<OverdueOffer[]> {
+    const offers: { id: string; rideId: string }[] =
+      await this.client.rideOffer.findMany({
+        where: {
+          status: RideOfferStatus.pending,
+          offeredAt: { lt: offeredBefore },
+        },
+        select: { id: true, rideId: true },
+      });
+    return offers.map((offer) => ({ rideId: offer.rideId, offerId: offer.id }));
   }
 
   async findBusyDriverIds(
