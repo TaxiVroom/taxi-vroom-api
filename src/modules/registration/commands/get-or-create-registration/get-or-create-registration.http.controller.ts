@@ -15,12 +15,16 @@ import { RegistrationBaseProps } from '@modules/registration/domain/registration
 import { RegistrationResponseDto } from '@modules/registration/dtos/registration.response.dto';
 import { CurrentUser } from '@modules/auth/current-user.decorator';
 import { GuestUser } from '@modules/auth/domain/authenticated-user';
+import { RegistrationMapper } from '@modules/registration/registration.mapper';
 import { GetOrCreateRegistrationCommand } from './get-or-create-registration.command';
 import { GetOrCreateRegistrationRequestDto } from './get-or-create-registration.request.dto';
 
 @Controller(routesV1.version)
 export class GetOrCreateRegistrationHttpController {
-  constructor(private readonly commandBus: CommandBus) {}
+  constructor(
+    private readonly commandBus: CommandBus,
+    private readonly mapper: RegistrationMapper,
+  ) {}
 
   @ApiOperation({ summary: 'Get or create a registration flow' })
   @ApiResponse({
@@ -45,16 +49,8 @@ export class GetOrCreateRegistrationHttpController {
     );
 
     return match(result, {
-      Ok: (entity: RegistrationEntity<RegistrationBaseProps>) => {
-        const props = entity.getProps();
-        const response = new RegistrationResponseDto(props);
-        response.role = props.role;
-        response.currentStep = entity.currentStep;
-        response.email = props.email;
-        response.firstName = props.firstName;
-        response.lastName = props.lastName;
-        return response;
-      },
+      Ok: (entity: RegistrationEntity<RegistrationBaseProps>) =>
+        this.mapper.toResponse(entity),
       Err: (error: Error) => {
         throw new UnprocessableEntityException(error.message);
       },

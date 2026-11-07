@@ -9,9 +9,10 @@ entry: src/main.ts → *.http.controller.ts → CommandBus → *.service.ts → 
 product: Ride-hailing app for French licensed taxis, backend authority for matching, pricing and history @ltm:product
 priceEstimate: shipped and tested on two emulators; ride starts ESTIMATED, ordering moves it to SEARCHING_DRIVER @ltm:priceEstimate
 ride: full ride works from estimate to completion, cancel, withdraw and no-show @ltm:rideLifecycle
-registration: passenger and driver onboarding work; admin can only validate, not reject @ltm:registration
+registration: passenger and driver onboarding work, validated documents copied to documents, spec docs/specs/inscription-chauffeur.md; admin can only validate, not reject @ltm:registration
 gaps: unprotected user routes, suspension, document rejection: see hyp
 rating: passenger rating and ride history shipped, spec docs/specs/notation-et-historique.md
 push: shipped on Android, iOS waits for hardware, spec docs/specs/notifications-push.md
 bookings: advance bookings shipped, spec docs/specs/reservations-a-l-avance.md
+pickupPlace: the passenger chooses the pickup, API unchanged (names it with the Géoplateforme), spec docs/specs/point-de-prise-en-charge.md
 next: to choose with the user; ideas noted for later in docs/a-faire.md

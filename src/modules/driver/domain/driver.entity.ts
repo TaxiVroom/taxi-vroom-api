@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { AggregateID, AggregateRoot } from '@libs/ddd';
 import { CreateDriverProps, DriverProps } from './driver.types';
 
@@ -8,7 +9,14 @@ export class DriverEntity extends AggregateRoot<DriverProps> {
     // Driver uses the user's id (Firebase UID) as its own id.
     return new DriverEntity({
       id: props.userId,
-      props: { userId: props.userId },
+      props: {
+        userId: props.userId,
+        vehicle: props.vehicle,
+        documents: props.documents.map((document) => ({
+          id: randomUUID(),
+          ...document,
+        })),
+      },
     });
   }
 

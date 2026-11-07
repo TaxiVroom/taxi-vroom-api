@@ -45,6 +45,8 @@ export enum DriverRegistrationStep {
   SOCIAL_LINK = 'SOCIAL_LINK',
   EMAIL = 'EMAIL',
   NAME = 'NAME',
+  // "Votre taxi": the vehicle the passengers will look for.
+  VEHICLE = 'VEHICLE',
   DOCUMENTS = 'DOCUMENTS',
   PENDING_REVIEW = 'PENDING_REVIEW',
   // Explicit step so the mobile knows immediately it must show the correction
@@ -53,6 +55,43 @@ export enum DriverRegistrationStep {
   COMPLETE = 'COMPLETE',
 }
 
+export enum VehicleColor {
+  black = 'BLACK',
+  white = 'WHITE',
+  grey = 'GREY',
+  silver = 'SILVER',
+  blue = 'BLUE',
+  red = 'RED',
+  green = 'GREEN',
+  beige = 'BEIGE',
+  brown = 'BROWN',
+  other = 'OTHER',
+}
+
+// What the passenger sees to recognize the taxi. Spec
+// docs/specs/vehicule-du-chauffeur.md.
+export interface RegistrationVehicle {
+  // Make and model in one, e.g. "Renault Austral".
+  model: string;
+  color: VehicleColor;
+  // Current French format, e.g. "AB-123-CD".
+  plate: string;
+  // The autorisation de stationnement, the "Taxi n° 118".
+  adsNumber: string;
+  // The commune de rattachement: its INSEE code and its name.
+  communeCode: string;
+  communeName: string;
+}
+
+// Whether another driver or registration already has the plate, or the taxi
+// number in the commune. Spec docs/specs/vehicule-du-chauffeur.md, point 7.
+export interface VehicleAvailability {
+  plateTaken: boolean;
+  licenceTaken: boolean;
+}
+
 export interface DriverRegistrationProps extends RegistrationBaseProps {
   currentStep: DriverRegistrationStep;
+  // Null until the "Votre taxi" step.
+  vehicle: RegistrationVehicle | null;
 }

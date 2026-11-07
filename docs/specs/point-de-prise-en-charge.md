@@ -1,6 +1,6 @@
 # Choisir son point de prise en charge
 
-> Statut : spec validée par le user le 2026-11-05 ; étapes 1 à 4 codées le 2026-11-05, toutes à la suite à la demande du user, non commitées ; le test (étape 5) attend le user.
+> Statut : livrée sur Android le 2026-11-05, testée par le user ; iOS préparé, non testé.
 
 Concerne `taxi-vroom-mobile` seulement : l'API n'a rien à changer (point 2 de « À valider », validé).
 
@@ -50,6 +50,7 @@ Chauffeur : guidé vers ce point (rien ne change chez lui : il reçoit déjà le
 | Plateformes | Android et iOS ; iOS préparé et non testé, faute de Mac |
 | Le champ Départ | Un champ comme la destination, sur le même écran « Votre trajet », au-dessus. « Position actuelle » par défaut : le cas le plus fréquent ne coûte aucun geste |
 | Recherche du départ | La même recherche que la destination (Mapbox Search Box, déjà en place, France, français), sans nouveau compte ni nouvelle clé |
+| Chargement de la recherche (demandé par le user, 2026-11-06) | Les composants partagés `SearchTextField` et `SearchResults` (`lib/core/widgets`), comme la recherche de communes du chauffeur : la roue dans le champ cherché, à droite ; les suggestions d'avant grisées et impossibles à toucher jusqu'à la réponse. Remplace la roue au milieu, qui ne s'affichait que liste vide, et les suggestions d'avant laissées l'air à jour |
 | Affichage du trajet (validé par le user, 2026-11-05, après un premier essai) | Comme les applis du marché : un seul bloc, un rond devant le départ et un carré devant la destination, reliés par un trait. « Position actuelle » est une vraie valeur, en couleur, pas une invite grise ; toucher le champ sélectionne le texte, taper le remplace. Une coche sur la ligne du départ retenu. Le premier essai (deux champs séparés, « Position actuelle » en gris) ne disait pas si la position actuelle était choisie |
 | Suggestions du départ | « Position actuelle » toujours en tête, puis les résultats ; champ vide : les destinations récentes, déjà chargées à l'accueil |
 | Choisir sur la carte | Le bouton « Choisir sur la carte », déjà présent mais vide, sert au champ actif, départ ou destination. Épingle fixe au centre, la carte glisse dessous : le geste habituel, plus précis qu'une épingle qu'on traîne du doigt |
@@ -143,16 +144,18 @@ Une étape à la fois, avec une pause et ta validation entre chaque.
 
 ### Étape 5 : test (par le user)
 
-- [ ] Sans toucher au départ : tout marche comme avant
-- [ ] Départ tapé : le prix change, le chauffeur est guidé vers ce point, l'historique montre son adresse
-- [ ] Départ sur la carte : l'adresse suit l'épingle
-- [ ] Réservation pour demain avec un autre départ
-- [ ] Point ajusté à la confirmation : le prix est recalculé
+- [x] Sans toucher au départ : tout marche comme avant
+- [x] Départ tapé : le prix change, le chauffeur est guidé vers ce point, l'historique montre son adresse
+- [x] Départ sur la carte : l'adresse suit l'épingle
+- [x] Réservation pour demain avec un autre départ
+- [x] Point ajusté à la confirmation : le prix est recalculé
+
+Testé et validé par le user sur Android, 2026-11-05. iOS non testé, faute d'iPhone.
 
 ### Fin de feature
 
-- [ ] Mettre à jour `.aimemory` des deux dépôts
-- [ ] Commiter quand le user le demande
+- [x] Mettre à jour `.aimemory` des deux dépôts
+- [x] Commiter quand le user le demande (code commité le 2026-11-05 : mobile `73bdd5d`, API `0ec1bbf`)
 
 ## Sources
 

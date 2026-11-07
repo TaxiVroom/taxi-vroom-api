@@ -16,12 +16,16 @@ import { RegistrationEntity } from '@modules/registration/domain/registration.en
 import { RegistrationBaseProps } from '@modules/registration/domain/registration.types';
 import { RegistrationResponseDto } from '@modules/registration/dtos/registration.response.dto';
 import { RegistrationNotFoundError } from '@modules/registration/domain/registration.errors';
+import { RegistrationMapper } from '@modules/registration/registration.mapper';
 import { UpdateRegistrationCommand } from './update-registration.command';
 import { UpdateRegistrationRequestDto } from './update-registration.request.dto';
 
 @Controller(routesV1.version)
 export class UpdateRegistrationHttpController {
-  constructor(private readonly commandBus: CommandBus) {}
+  constructor(
+    private readonly commandBus: CommandBus,
+    private readonly mapper: RegistrationMapper,
+  ) {}
 
   @ApiOperation({ summary: 'Advance to the next registration step' })
   @ApiResponse({
@@ -43,16 +47,8 @@ export class UpdateRegistrationHttpController {
     );
 
     return match(result, {
-      Ok: (entity: RegistrationEntity<RegistrationBaseProps>) => {
-        const props = entity.getProps();
-        const response = new RegistrationResponseDto(props);
-        response.role = props.role;
-        response.currentStep = entity.currentStep;
-        response.email = props.email;
-        response.firstName = props.firstName;
-        response.lastName = props.lastName;
-        return response;
-      },
+      Ok: (entity: RegistrationEntity<RegistrationBaseProps>) =>
+        this.mapper.toResponse(entity),
       Err: (error: Error) => {
         if (error instanceof RegistrationNotFoundError)
           throw new NotFoundException(error.message);

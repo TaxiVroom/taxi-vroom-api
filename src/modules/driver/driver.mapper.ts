@@ -9,13 +9,18 @@ export class DriverMapper
   implements Mapper<DriverEntity, DriverModel, DriverResponseDto>
 {
   toPersistence(entity: DriverEntity): DriverModel {
-    return { userId: entity.id };
+    const { vehicle, documents } = entity.getProps();
+    return { userId: entity.id, vehicle, documents };
   }
 
   toDomain(record: DriverModel): DriverEntity {
     return new DriverEntity({
       id: record.userId,
-      props: { userId: record.userId },
+      props: {
+        userId: record.userId,
+        vehicle: record.vehicle,
+        documents: record.documents,
+      },
     });
   }
 

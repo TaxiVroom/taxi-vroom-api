@@ -14,6 +14,16 @@ import {
 import { RegistrationMapper } from '../registration.mapper';
 import { RegistrationRepositoryPort } from './registration.repository.port';
 
+// A row of driver_registration_vehicles, without its key.
+export interface RegistrationVehicleModel {
+  model: string;
+  color: string;
+  plate: string;
+  adsNumber: string;
+  communeCode: string;
+  communeName: string;
+}
+
 export type RegistrationModel = {
   id: string;
   userId: string;
@@ -23,12 +33,14 @@ export type RegistrationModel = {
   firstName: string | null;
   lastName: string | null;
   currentStep: string;
+  // A driver's vehicle once given; always null for a passenger.
+  vehicle: RegistrationVehicleModel | null;
   createdAt: Date;
   updatedAt: Date;
 };
 
 type RegistrationWithIncludes = RegistrationGetPayload<{
-  include: { passenger: true; driver: true };
+  include: { passenger: true; driver: { include: { vehicle: true } } };
 }>;
 
 @Injectable()
@@ -57,22 +69,27 @@ export class RegistrationRepository
   async findOneById(
     userId: string,
   ): Promise<Option<RegistrationEntity<RegistrationBaseProps>>> {
-    const result = await this.client.registration.findUnique({
-      where: { userId },
-      include: { passenger: true, driver: true },
-    });
+    const result: RegistrationWithIncludes | null =
+      await this.client.registration.findUnique({
+        where: { userId },
+        include: { passenger: true, driver: { include: { vehicle: true } } },
+      });
     if (!result) return None;
     if (result.passenger) {
       return Some(
         this.mapper.toDomain(
-          this.flattenRecord(result, result.passenger.currentStep),
+          this.flattenRecord(result, result.passenger.currentStep, null),
         ),
       );
     }
     if (result.driver) {
       return Some(
         this.mapper.toDomain(
-          this.flattenRecord(result, result.driver.currentStep),
+          this.flattenRecord(
+            result,
+            result.driver.currentStep,
+            result.driver.vehicle,
+          ),
         ),
       );
     }
@@ -144,15 +161,25 @@ export class RegistrationRepository
           },
         });
         break;
-      case RegistrationRole.driver:
+      case RegistrationRole.driver: {
+        // The vehicle replaces the one given before, if any.
+        const vehicle = this.mapper.toPersistence(entity).vehicle;
         await this.client.registration.update({
           where: { id },
           data: {
             ...commonData,
-            driver: { update: { currentStep: entity.currentStep } },
+            driver: {
+              update: {
+                currentStep: entity.currentStep,
+                ...(vehicle && {
+                  vehicle: { upsert: { create: vehicle, update: vehicle } },
+                }),
+              },
+            },
           },
         });
         break;
+      }
       default: {
         const _exhaustive: never = commonData.role;
         throw new Error(`Unhandled registration role: ${_exhaustive}`);
@@ -160,6 +187,18 @@ export class RegistrationRepository
     }
 
     await entity.publishEvents(this.logger, this.eventEmitter);
+  }
+
+  async savePushToken(userId: string, token: string): Promise<void> {
+    await this.client.registrationPushToken.upsert({
+      where: { userId },
+      create: { userId, token },
+      update: { token },
+    });
+  }
+
+  async forgetPushToken(userId: string): Promise<void> {
+    await this.client.registrationPushToken.deleteMany({ where: { userId } });
   }
 
   async delete(
@@ -182,6 +221,7 @@ export class RegistrationRepository
   private flattenRecord(
     record: RegistrationWithIncludes,
     currentStep: string,
+    vehicle: RegistrationVehicleModel | null,
   ): RegistrationModel {
     return {
       id: record.id,
@@ -192,6 +232,14 @@ export class RegistrationRepository
       firstName: record.firstName,
       lastName: record.lastName,
       currentStep,
+      vehicle: vehicle && {
+        model: vehicle.model,
+        color: vehicle.color,
+        plate: vehicle.plate,
+        adsNumber: vehicle.adsNumber,
+        communeCode: vehicle.communeCode,
+        communeName: vehicle.communeName,
+      },
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };

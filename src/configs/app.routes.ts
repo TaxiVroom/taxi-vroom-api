@@ -8,6 +8,7 @@ const usersRoot = 'users';
 const walletsRoot = 'wallets';
 const registrationFlowsRoot = 'registration-flows';
 const passengersRoot = 'passengers';
+const driversRoot = 'drivers';
 const registrationDocumentTypesRoot = 'registration-document-types';
 const adminRoot = 'admin';
 const ridesRoot = 'rides';
@@ -30,6 +31,8 @@ export const routesV1 = {
   registrationFlow: {
     me: `${registrationFlowsRoot}/me`,
     emailAvailability: `${registrationFlowsRoot}/me/email-availability`,
+    vehicle: `${registrationFlowsRoot}/me/vehicle`,
+    pushToken: `${registrationFlowsRoot}/me/push-token`,
     documents: `${registrationFlowsRoot}/me/documents`,
     documentUrl: `${registrationFlowsRoot}/me/documents/:documentTypeId/url`,
   },
@@ -38,6 +41,9 @@ export const routesV1 = {
   },
   passenger: {
     root: passengersRoot,
+  },
+  driver: {
+    vehicle: `${driversRoot}/me/vehicle`,
   },
   notification: {
     pushRegistration: 'me/push-registration',

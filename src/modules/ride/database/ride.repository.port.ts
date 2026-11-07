@@ -15,7 +15,23 @@ export interface RideDriverStats {
   completedRides: number;
 }
 
-export interface RideDriver extends RidePerson, RideDriverStats {}
+// What the passenger looks for to recognize the taxi. Spec
+// docs/specs/vehicule-du-chauffeur.md.
+export interface RideVehicle {
+  // Make and model, e.g. "Renault Austral".
+  model: string;
+  // A VehicleColor value, e.g. "GREY".
+  color: string;
+  plate: string;
+  // The "Taxi n° 118" of the commune de rattachement.
+  adsNumber: string;
+  communeName: string;
+}
+
+export interface RideDriver extends RidePerson, RideDriverStats {
+  // Null for a driver registered before the "Votre taxi" step existed.
+  vehicle: RideVehicle | null;
+}
 
 // Who takes part in a ride, to tell each one about the other.
 export interface RideParticipants {

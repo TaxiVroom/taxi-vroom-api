@@ -67,6 +67,13 @@ const withSubTables = {
 };
 
 const personFields = { firstName: true, lastName: true, phone: true };
+const vehicleFields = {
+  model: true,
+  color: true,
+  plate: true,
+  adsNumber: true,
+  communeName: true,
+};
 
 @Injectable()
 export class RideRepository
@@ -269,7 +276,12 @@ export class RideRepository
           where: { status: RideOfferStatus.accepted },
           select: {
             driverId: true,
-            driver: { select: { user: { select: personFields } } },
+            driver: {
+              select: {
+                user: { select: personFields },
+                vehicle: { select: vehicleFields },
+              },
+            },
           },
         },
       },
@@ -278,7 +290,11 @@ export class RideRepository
     return {
       passenger: ride.passenger.user,
       driver: offer
-        ? { ...offer.driver.user, ...(await this.driverStats(offer.driverId)) }
+        ? {
+            ...offer.driver.user,
+            vehicle: offer.driver.vehicle,
+            ...(await this.driverStats(offer.driverId)),
+          }
         : null,
     };
   }

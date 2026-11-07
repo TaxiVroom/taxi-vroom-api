@@ -12,6 +12,11 @@ import {
   PUSH_SENDER,
 } from './notification.di-tokens';
 import { PushRegistrationMapper } from './push-registration.mapper';
+import { TellDriverWhenAccountIsCreatedDomainEventHandler } from './application/event-handlers/tell-driver-when-account-is-created.domain-event-handler';
+
+const eventHandlers: Provider[] = [
+  TellDriverWhenAccountIsCreatedDomainEventHandler,
+];
 
 const httpControllers = [
   RegisterPushTokenHttpController,
@@ -40,6 +45,12 @@ const adapters: Provider[] = [
 @Module({
   imports: [CqrsModule],
   controllers: [...httpControllers],
-  providers: [...commandHandlers, ...mappers, ...repositories, ...adapters],
+  providers: [
+    ...commandHandlers,
+    ...eventHandlers,
+    ...mappers,
+    ...repositories,
+    ...adapters,
+  ],
 })
 export class NotificationModule {}

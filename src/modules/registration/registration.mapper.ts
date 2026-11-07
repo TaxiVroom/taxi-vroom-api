@@ -3,13 +3,18 @@ import { Mapper } from '@libs/ddd';
 import { RegistrationEntity } from './domain/registration.entity';
 import { PassengerRegistrationEntity } from './domain/passenger-registration.entity';
 import { DriverRegistrationEntity } from './domain/driver-registration.entity';
-import { RegistrationResponseDto } from './dtos/registration.response.dto';
+import {
+  RegistrationResponseDto,
+  RegistrationVehicleResponseDto,
+} from './dtos/registration.response.dto';
 import { RegistrationModel } from './database/registration.repository';
 import {
   DriverRegistrationStep,
   PassengerRegistrationStep,
   RegistrationBaseProps,
   RegistrationRole,
+  RegistrationVehicle,
+  VehicleColor,
 } from '@modules/registration/domain/registration.types';
 
 @Injectable()
@@ -34,9 +39,17 @@ export class RegistrationMapper
       firstName: props.firstName,
       lastName: props.lastName,
       currentStep: entity.currentStep,
+      vehicle: this.vehicleOf(entity),
       createdAt: props.createdAt,
       updatedAt: props.updatedAt,
     };
+  }
+
+  // Only a driver registration has one.
+  private vehicleOf(
+    entity: RegistrationEntity<RegistrationBaseProps>,
+  ): RegistrationVehicle | null {
+    return entity instanceof DriverRegistrationEntity ? entity.vehicle : null;
   }
 
   toDomain(
@@ -62,6 +75,21 @@ export class RegistrationMapper
     response.email = props.email;
     response.firstName = props.firstName;
     response.lastName = props.lastName;
+    response.vehicle = this.toVehicleResponse(this.vehicleOf(entity));
+    return response;
+  }
+
+  private toVehicleResponse(
+    vehicle: RegistrationVehicle | null,
+  ): RegistrationVehicleResponseDto | null {
+    if (!vehicle) return null;
+    const response = new RegistrationVehicleResponseDto();
+    response.model = vehicle.model;
+    response.color = vehicle.color;
+    response.plate = vehicle.plate;
+    response.adsNumber = vehicle.adsNumber;
+    response.communeCode = vehicle.communeCode;
+    response.communeName = vehicle.communeName;
     return response;
   }
 
@@ -97,6 +125,10 @@ export class RegistrationMapper
         firstName: record.firstName,
         lastName: record.lastName,
         currentStep: record.currentStep as DriverRegistrationStep,
+        vehicle: record.vehicle && {
+          ...record.vehicle,
+          color: record.vehicle.color as VehicleColor,
+        },
       },
     });
   }

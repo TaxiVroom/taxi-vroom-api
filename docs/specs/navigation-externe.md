@@ -1,6 +1,6 @@
 # Naviguer avec Google Maps ou Waze
 
-> Statut : étapes 1 et 1b codées le 2026-11-05, non commitées ; le test (étape 2) attend le user.
+> Statut : livrée sur Android le 2026-11-05, testée par le user ; iOS préparé, non testé.
 
 Concerne `taxi-vroom-mobile` seulement : l'API n'est pas touchée.
 
@@ -119,12 +119,12 @@ Une étape à la fois, avec une pause et ta validation entre chaque.
 
 - [x] 1er appui sur « Itinéraire » : la feuille s'ouvre ; Google Maps démarre la navigation vers le client (vérifié par le user le 2026-11-05, après avoir recompilé l'app : un hot restart ne suffit pas après l'ajout d'un package natif)
 - [x] Après l'étape 1b, recompiler l'app ; chaque appui rouvre la feuille ; Waze ouvre Waze, ou son site sans Waze installé (validé par le user, 2026-11-05)
-- [ ] Passager à bord : la navigation vise la destination
+- [x] Passager à bord : la navigation vise la destination (validé par le user, 2026-11-05)
 
 ### Fin de feature
 
-- [ ] Mettre à jour `.aimemory` du dépôt mobile
-- [ ] Commiter quand le user le demande
+- [x] Mettre à jour `.aimemory` du dépôt mobile
+- [x] Commiter quand le user le demande (mobile `73bdd5d`)
 
 ## Sources
 

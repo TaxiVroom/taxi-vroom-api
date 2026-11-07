@@ -26,6 +26,8 @@ enum DriverRegistrationStep {
   SOCIAL_LINK
   EMAIL
   NAME
+  /// "Votre taxi": the vehicle the passengers will look for.
+  VEHICLE
   DOCUMENTS
   PENDING_REVIEW
   DOCUMENTS_CORRECTION
@@ -89,9 +91,10 @@ model Driver {
   isSuspended Boolean @default(false)
   user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  documents        Document[]
-  suspensionEvents DriverSuspensionEvent[]
-  rideOffers       RideOffer[]
+  vehicle             DriverVehicle?
+  documents           Document[]
+  suspensionEvents    DriverSuspensionEvent[]
+  rideOffers          RideOffer[]
   scheduledRides      RideScheduleDriver[]
   scheduleWithdrawals RideScheduleWithdrawal[]
   scheduleRefusals    RideScheduleRefusal[]
@@ -205,6 +208,23 @@ model Registration {
 
   passenger PassengerRegistration?
   driver    DriverRegistration?
+  pushToken RegistrationPushToken?
+}
+
+/// The phone's notification token while the account does not exist yet,
+/// e.g. a driver waiting for their documents to be validated. Moved to
+/// push_registrations when the account is created. Spec
+/// docs/specs/validation-du-dossier.md.
+model RegistrationPushToken {
+  userId    String   @id
+  /// Firebase Cloud Messaging registration token.
+  token     String
+  /// The last token sent replaces the previous one.
+  updatedAt DateTime @updatedAt
+
+  registration Registration @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("registration_push_tokens")
 }
 
 model PassengerRegistration {
@@ -218,7 +238,62 @@ model DriverRegistration {
   currentStep DriverRegistrationStep @default(SOCIAL_LINK)
   flow        Registration           @relation(fields: [userId], references: [userId], onDelete: Cascade)
 
+  vehicle               DriverRegistrationVehicle?
   registrationDocuments RegistrationDocument[]
+}
+
+/// What the passenger sees to recognize the taxi. Spec
+/// docs/specs/vehicule-du-chauffeur.md.
+enum VehicleColor {
+  BLACK
+  WHITE
+  GREY
+  SILVER
+  BLUE
+  RED
+  GREEN
+  BEIGE
+  BROWN
+  OTHER
+}
+
+/// The vehicle given at the "Votre taxi" step, checked by the admin against
+/// the carte grise; replaced while the registration is not complete.
+model DriverRegistrationVehicle {
+  driverRegId String       @id
+  /// Make and model in one, e.g. "Renault Austral".
+  model       String
+  color       VehicleColor
+  /// Current French format, e.g. "AB-123-CD", checked by the entity.
+  plate       String
+  /// The autorisation de stationnement, the "Taxi n° 118".
+  adsNumber   String
+  /// The commune de rattachement: its INSEE code and its name.
+  communeCode String
+  communeName String
+
+  driverRegistration DriverRegistration @relation(fields: [driverRegId], references: [userId], onDelete: Cascade)
+
+  @@map("driver_registration_vehicles")
+}
+
+/// The driver's vehicle, copied from the registration when the driver is
+/// created. One per driver.
+model DriverVehicle {
+  driverId    String       @id
+  model       String
+  color       VehicleColor
+  plate       String       @unique
+  adsNumber   String
+  communeCode String
+  communeName String
+  createdAt   DateTime     @default(now())
+
+  driver Driver @relation(fields: [driverId], references: [userId], onDelete: Cascade)
+
+  /// A commune gives each autorisation de stationnement once.
+  @@unique([communeCode, adsNumber])
+  @@map("driver_vehicles")
 }
 
 model Wallet {
