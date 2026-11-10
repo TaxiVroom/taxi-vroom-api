@@ -12,4 +12,10 @@ export class DocumentTypeResponseDto {
     description: 'Whether the back side must be uploaded',
   })
   backRequired: boolean;
+
+  @ApiProperty({
+    example: true,
+    description: 'Whether its date of end of validity must be given',
+  })
+  expires: boolean;
 }

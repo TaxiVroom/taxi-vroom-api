@@ -4,6 +4,7 @@ import {
   Logger,
   OnApplicationBootstrap,
 } from '@nestjs/common';
+import { QueryBus } from '@nestjs/cqrs';
 import { Interval } from '@nestjs/schedule';
 import { RequestContext } from 'nestjs-request-context';
 import { RideEntity } from '@modules/ride/domain/ride.entity';
@@ -19,6 +20,10 @@ import { RideRealtimePort } from './ports/ride-realtime.port';
 import { RideDispatcher } from './ride-dispatcher';
 import { RideNotifier } from './ride-notifier';
 import { RidePublisher } from './ride-publisher';
+import {
+  DriverDocumentStatesReadModel,
+  GetDriverDocumentStatesQuery,
+} from '@modules/driver/queries/get-driver-document-states/get-driver-document-states.query-handler';
 
 const everyMinuteMs = 60_000;
 
@@ -56,6 +61,7 @@ export class BookingStarter implements OnApplicationBootstrap {
     private readonly publisher: RidePublisher,
     private readonly notifier: RideNotifier,
     private readonly dispatcher: RideDispatcher,
+    private readonly queryBus: QueryBus,
   ) {}
 
   // The bookings due while the server was stopped start at once.
@@ -127,9 +133,7 @@ export class BookingStarter implements OnApplicationBootstrap {
       const ride = found.unwrap();
       const committedDriverId = ride.scheduledDriverId;
       const isOnline = committedDriverId
-        ? (
-            await this.driverLocator.findOnlineDriver(committedDriverId)
-          ).isSome()
+        ? await this.isOnlineInOrder(committedDriverId)
         : false;
       const outcome = ride.startBooking(isOnline, new Date());
       // The database and this server disagree on the time: next minute.
@@ -137,6 +141,18 @@ export class BookingStarter implements OnApplicationBootstrap {
       await this.rideRepo.save(ride);
       return { ride, outcome: outcome.unwrap(), committedDriverId };
     });
+  }
+
+  // Blocked by a document at the deadline: treated as not online, the
+  // booking goes to another driver. Spec docs/specs/documents-du-chauffeur.md.
+  private async isOnlineInOrder(driverId: string): Promise<boolean> {
+    const online = await this.driverLocator.findOnlineDriver(driverId);
+    if (online.isNone()) return false;
+    const [documents]: DriverDocumentStatesReadModel[] =
+      await this.queryBus.execute(
+        new GetDriverDocumentStatesQuery({ driverIds: [driverId] }),
+      );
+    return !documents.isBlocked;
   }
 
   // Saved and published first: the passenger's app opens the ride from

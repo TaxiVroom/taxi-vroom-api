@@ -17,6 +17,7 @@ import { MapboxRoutePlannerAdapter } from './infrastructure/mapbox-route-planner
 import { GeoApiTerritoryAdapter } from './infrastructure/geo-api-territory.adapter';
 import { GeoplateformeAddressFinderAdapter } from './infrastructure/geoplateforme-address-finder.adapter';
 import { CalendrierApiPublicHolidaysAdapter } from './infrastructure/calendrier-api-public-holidays.adapter';
+import { FindDriversInRideQueryHandler } from './queries/find-drivers-in-ride/find-drivers-in-ride.query-handler';
 import { RideDispatcher } from './application/ride-dispatcher';
 import { RideOfferTimer } from './application/ride-offer-timer';
 import { RidePublisher } from './application/ride-publisher';
@@ -122,6 +123,7 @@ const queryHandlers: Provider[] = [
   FindMyBookingsQueryHandler,
   FindAvailableBookingsQueryHandler,
   FindAcceptedBookingsQueryHandler,
+  FindDriversInRideQueryHandler,
 ];
 
 const applicationServices: Provider[] = [

@@ -16,6 +16,7 @@ import {
 import { RegistrationCompletedDomainEvent } from './events/registration-completed.domain-event';
 import {
   RegistrationAlreadyCompleteError,
+  RegistrationNotPendingReviewError,
   RegistrationNotCompleteError,
   RegistrationVehicleLicenceTakenError,
   RegistrationVehiclePlateInvalidError,
@@ -94,6 +95,17 @@ export class DriverRegistrationEntity extends RegistrationEntity<DriverRegistrat
     if (availability.licenceTaken) {
       return Err(new RegistrationVehicleLicenceTakenError());
     }
+    return Ok(null);
+  }
+
+  // A document type was added while the file waited for the admin: the
+  // driver sends it from "Mes documents". Spec
+  // docs/specs/documents-du-chauffeur.md, point 6.
+  askNewDocument(): Result<null, RegistrationNotPendingReviewError> {
+    if (this.props.currentStep !== DriverRegistrationStep.PENDING_REVIEW) {
+      return Err(new RegistrationNotPendingReviewError());
+    }
+    this.props.currentStep = DriverRegistrationStep.DOCUMENTS;
     return Ok(null);
   }
 

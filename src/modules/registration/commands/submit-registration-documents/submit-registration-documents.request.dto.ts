@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID } from 'class-validator';
+import { IsISO8601, IsOptional, IsUUID } from 'class-validator';
 
 export const ALLOWED_MIME_TYPES = [
   'image/jpeg',
@@ -17,6 +17,15 @@ export class SubmitRegistrationDocumentsRequestDto {
   })
   @IsUUID()
   readonly documentTypeId: string;
+
+  @ApiProperty({
+    example: '2030-03-11',
+    required: false,
+    description: 'Date of end of validity, for a type that expires',
+  })
+  @IsOptional()
+  @IsISO8601()
+  readonly expiresAt?: string;
 
   // These fields exist for Swagger documentation ONLY, they are never populated in the body at runtime.
   // Multer intercepts multipart files before NestJS parses the body; files are accessed via @UploadedFiles() in the controller.

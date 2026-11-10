@@ -10,19 +10,27 @@ import { DocumentTypeRepositoryPort } from '@modules/registration/database/docum
 import { RegistrationDocumentEntity } from '@modules/registration/domain/registration-document.entity';
 import { DocumentStatus } from '@modules/registration/domain/registration-document.types';
 
-import { RegistrationDocumentNotFoundError } from '@modules/registration/domain/registration-document.errors';
+import {
+  DocumentExpiredError,
+  DocumentExpiryRequiredError,
+  DocumentTypeNotFoundError,
+  RegistrationDocumentNotFoundError,
+} from '@modules/registration/domain/registration-document.errors';
 import {
   RegistrationNotFoundError,
   RegistrationNotCompleteError,
 } from '@modules/registration/domain/registration.errors';
 import { ValidateRegistrationDocumentCommand } from './validate-registration-document.command';
 
-type ValidateResult = Result<
-  void,
+export type ValidateRegistrationDocumentError =
   | RegistrationDocumentNotFoundError
+  | DocumentTypeNotFoundError
+  | DocumentExpiryRequiredError
+  | DocumentExpiredError
   | RegistrationNotFoundError
-  | RegistrationNotCompleteError
->;
+  | RegistrationNotCompleteError;
+
+type ValidateResult = Result<void, ValidateRegistrationDocumentError>;
 
 @CommandHandler(ValidateRegistrationDocumentCommand)
 export class ValidateRegistrationDocumentService implements ICommandHandler {
@@ -47,7 +55,16 @@ export class ValidateRegistrationDocumentService implements ICommandHandler {
     const document = await this.findDocument(command.documentId);
     if (!document) return Err(new RegistrationDocumentNotFoundError());
 
-    document.markAsValidated();
+    const type = await this.documentTypeRepo.findOneById(
+      document.getProps().documentTypeId,
+    );
+    if (type.isNone()) return Err(new DocumentTypeNotFoundError());
+    const validated = document.markAsValidated(
+      command.expiresAt,
+      type.unwrap(),
+      new Date(),
+    );
+    if (validated.isErr()) return Err(validated.unwrapErr());
     await this.registrationDocumentRepo.update(document);
     this.logger.log(
       `[execute] Document approuvé — documentId=${command.documentId}`,

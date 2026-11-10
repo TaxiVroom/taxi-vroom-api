@@ -18,6 +18,8 @@ export interface DriverDocument {
   documentTypeId: string;
   frontFilePath: string;
   backFilePath: string | null;
+  // Null when the document type does not expire.
+  expiresAt: Date | null;
 }
 
 // A validated document of the registration, before it is the driver's.
@@ -25,6 +27,7 @@ export interface CreateDriverDocumentProps {
   documentTypeId: string;
   frontFilePath: string;
   backFilePath: string | null;
+  expiresAt: Date | null;
 }
 
 export interface DriverProps {

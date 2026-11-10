@@ -1,3 +1,7 @@
 // Tokens used for Dependency Injection
 
 export const DRIVER_REPOSITORY = Symbol('DRIVER_REPOSITORY');
+export const DRIVER_ONLINE_PERMISSION = Symbol('DRIVER_ONLINE_PERMISSION');
+export const DRIVER_DOCUMENT_SUBMISSION_REPOSITORY = Symbol(
+  'DRIVER_DOCUMENT_SUBMISSION_REPOSITORY',
+);

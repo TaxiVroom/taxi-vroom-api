@@ -44,12 +44,16 @@ export const routesV1 = {
   },
   driver: {
     vehicle: `${driversRoot}/me/vehicle`,
+    documents: `${driversRoot}/me/documents`,
+    document: `${driversRoot}/me/documents/:documentTypeId`,
+    online: `${driversRoot}/me/online`,
   },
   notification: {
     pushRegistration: 'me/push-registration',
   },
   admin: {
     validateRegistrationDocument: `${adminRoot}/registration-documents/:documentId/validate`,
+    validateDriverDocument: `${adminRoot}/driver-documents/:submissionId/validate`,
   },
   booking: {
     available: `${bookingsRoot}/available`,

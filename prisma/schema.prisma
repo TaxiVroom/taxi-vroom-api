@@ -93,6 +93,7 @@ model Driver {
 
   vehicle             DriverVehicle?
   documents           Document[]
+  documentSubmissions DriverDocumentSubmission[]
   suspensionEvents    DriverSuspensionEvent[]
   rideOffers          RideOffer[]
   scheduledRides      RideScheduleDriver[]
@@ -107,9 +108,16 @@ model DocumentType {
   id           String  @id
   name         String  @unique
   backRequired Boolean @default(false)
+  /// The document has an end of validity: its date is asked when it is sent.
+  /// Spec docs/specs/documents-du-chauffeur.md.
+  expires      Boolean @default(false)
+  /// Required from this date for the drivers already registered; empty when
+  /// required at once.
+  requiredFrom DateTime?
 
   registrationDocuments RegistrationDocument[]
   documents             Document[]
+  submissions           DriverDocumentSubmission[]
 
   @@map("document_types")
 }
@@ -126,6 +134,8 @@ model RegistrationDocument {
   documentTypeId String
   frontFilePath  String
   backFilePath   String?
+  /// Empty when the document type does not expire.
+  expiresAt      DateTime?
   status         DocumentStatus @default(SUBMITTED)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -164,19 +174,43 @@ model RegistrationDocumentRejectionEvent {
   @@map("registration_document_rejection_events")
 }
 
+/// The valid document of each type of a driver. Its state (valid, to renew,
+/// expired) is computed from expiresAt, never stored. Spec
+/// docs/specs/documents-du-chauffeur.md.
 model Document {
   id             String    @id
   driverId       String
   documentTypeId String
   frontFilePath  String
   backFilePath   String?
+  /// Empty when the document type does not expire.
   expiresAt      DateTime?
   createdAt      DateTime  @default(now())
 
   driver       Driver       @relation(fields: [driverId], references: [userId], onDelete: Cascade)
   documentType DocumentType @relation(fields: [documentTypeId], references: [id])
 
+  @@unique([driverId, documentTypeId])
   @@map("documents")
+}
+
+/// A renewed or new document sent by a driver, waiting for the admin; the
+/// valid one stays in documents until it is validated.
+model DriverDocumentSubmission {
+  id             String    @id
+  driverId       String
+  documentTypeId String
+  frontFilePath  String
+  backFilePath   String?
+  /// Empty when the document type does not expire.
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  driver       Driver       @relation(fields: [driverId], references: [userId], onDelete: Cascade)
+  documentType DocumentType @relation(fields: [documentTypeId], references: [id])
+
+  @@unique([driverId, documentTypeId])
+  @@map("driver_document_submissions")
 }
 
 model DriverSuspensionEvent {

@@ -59,6 +59,15 @@ export class RegistrationVehicleLicenceTakenError extends ExceptionBase {
   }
 }
 
+// Only a file waiting for the admin goes back to the documents.
+export class RegistrationNotPendingReviewError extends ExceptionBase {
+  static readonly message = "Le dossier n'attend pas de vérification";
+  public readonly code = 'REGISTRATION.NOT_PENDING_REVIEW';
+  constructor(cause?: Error, metadata?: unknown) {
+    super(RegistrationNotPendingReviewError.message, cause, metadata);
+  }
+}
+
 export class RegistrationMissingPhoneError extends ExceptionBase {
   static readonly message = 'Phone number is required to complete registration';
   public readonly code = 'REGISTRATION.MISSING_PHONE';

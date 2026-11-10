@@ -48,6 +48,16 @@ export class PushRegistrationRepository
     return row ? Some(row.token) : None;
   }
 
+  async findTokensByUserIds(userIds: string[]): Promise<Map<string, string>> {
+    const rows: { userId: string; token: string }[] = await this.model.findMany(
+      {
+        where: { userId: { in: userIds } },
+        select: { userId: true, token: true },
+      },
+    );
+    return new Map(rows.map((row) => [row.userId, row.token]));
+  }
+
   async deleteByUserId(userId: string): Promise<void> {
     await this.model.deleteMany({ where: { userId } });
   }

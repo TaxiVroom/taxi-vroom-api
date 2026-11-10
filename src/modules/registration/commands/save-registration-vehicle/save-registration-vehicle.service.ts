@@ -72,7 +72,7 @@ export class SaveRegistrationVehicleService implements ICommandHandler {
     if (!vehicle) return { plateTaken: false, licenceTaken: false };
     return this.queryBus.execute(
       new CheckVehicleAvailabilityQuery({
-        requestingUserId: registration.id,
+        requestingUserId: registration.getProps().userId,
         plate: vehicle.plate,
         adsNumber: vehicle.adsNumber,
         communeCode: vehicle.communeCode,

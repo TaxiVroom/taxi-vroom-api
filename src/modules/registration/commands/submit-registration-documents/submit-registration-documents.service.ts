@@ -17,6 +17,8 @@ import { MIME_TYPE_TO_EXTENSION } from '@modules/registration/domain/registratio
 import { slugify } from '@libs/utils/slugify';
 import {
   DocumentBackRequiredError,
+  DocumentExpiredError,
+  DocumentExpiryRequiredError,
   DocumentTypeNotFoundError,
   UnsupportedFileTypeError,
 } from '@modules/registration/domain/registration-document.errors';
@@ -30,6 +32,8 @@ type SubmitResult = Result<
   | DocumentTypeNotFoundError
   | DocumentBackRequiredError
   | UnsupportedFileTypeError
+  | DocumentExpiryRequiredError
+  | DocumentExpiredError
 >;
 
 @CommandHandler(SubmitRegistrationDocumentsCommand)
@@ -91,17 +95,23 @@ export class SubmitRegistrationDocumentsService implements ICommandHandler {
     });
     if (backPathResult.isErr()) return backPathResult;
 
-    const document = RegistrationDocumentEntity.create({
-      driverRegId: command.userId,
-      documentTypeId: command.documentTypeId,
-      frontFilePath: frontPathResult.unwrap()!,
-      backFilePath: backPathResult.unwrap(),
-    });
+    const created = RegistrationDocumentEntity.create(
+      {
+        driverRegId: command.userId,
+        documentTypeId: command.documentTypeId,
+        frontFilePath: frontPathResult.unwrap()!,
+        backFilePath: backPathResult.unwrap(),
+        expiresAt: command.expiresAt,
+      },
+      documentType,
+      new Date(),
+    );
+    if (created.isErr()) return Err(created.unwrapErr());
 
     // Simulated upload error — remove when done testing
     //throw new Error('Simulated upload error');
 
-    await this.registrationDocumentRepo.upsert(document);
+    await this.registrationDocumentRepo.upsert(created.unwrap());
     return Ok(undefined);
   }
 

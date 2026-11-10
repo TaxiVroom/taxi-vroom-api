@@ -6,10 +6,12 @@ import {
   addMinutes,
   differenceInMilliseconds,
   differenceInMinutes,
+  isAfter,
   isBefore,
   max,
 } from 'date-fns';
 import { distanceBetween } from 'geofire-common';
+import { RideEndedDomainEvent } from './events/ride-ended.domain-event';
 import { Err, None, Ok, Option, Result, Some } from 'oxide.ts';
 import {
   BoardingCodeLockedError,
@@ -17,6 +19,7 @@ import {
   NoShowTooEarlyError,
   RideAlreadyRatedError,
   RideBookingOverlapError,
+  RideDriverDocumentsEndBeforeError,
   RideBookingTakenError,
   RideDriverBusyError,
   RideEstimateExpiredError,
@@ -315,17 +318,26 @@ export class RideEntity extends AggregateRoot<RideProps> {
 
   // "Accepter" a booking: the driver commits to it. Their other bookings
   // tell whether they can be on time for this one.
+  // A driver whose documents end before the pickup cannot take it: null
+  // means no end. Spec docs/specs/documents-du-chauffeur.md.
   acceptBooking(
     driverId: string,
     otherPickupTimes: Date[],
+    driverInOrderUntil: Date | null,
     now: Date,
   ): Result<
     void,
-    RideWrongStepError | RideBookingTakenError | RideBookingOverlapError
+    | RideWrongStepError
+    | RideBookingTakenError
+    | RideBookingOverlapError
+    | RideDriverDocumentsEndBeforeError
   > {
     const schedule = this.schedule;
     if (this.status !== RideStatus.booked || !schedule) {
       return Err(new RideWrongStepError());
+    }
+    if (driverInOrderUntil && !isAfter(driverInOrderUntil, schedule.pickupAt)) {
+      return Err(new RideDriverDocumentsEndBeforeError());
     }
     if (schedule.driver) {
       return schedule.driver.driverId === driverId
@@ -612,6 +624,7 @@ export class RideEntity extends AggregateRoot<RideProps> {
       completion: { completedAt: now, meterCents, supplements },
       rating: null,
     };
+    this.endFor(driverId);
     return Ok(undefined);
   }
 
@@ -672,7 +685,9 @@ export class RideEntity extends AggregateRoot<RideProps> {
         expiredAt: now,
       });
     }
+    const driverId = this.driverId;
     this.props.step = { status: RideStatus.cancelled, cancelledAt: now };
+    if (driverId) this.endFor(driverId);
     return Ok(undefined);
   }
 
@@ -695,6 +710,7 @@ export class RideEntity extends AggregateRoot<RideProps> {
       withdrawnAt: now,
     });
     this.props.step = { status: RideStatus.searchingDriver };
+    this.endFor(driverId);
     return Ok(undefined);
   }
 
@@ -728,6 +744,7 @@ export class RideEntity extends AggregateRoot<RideProps> {
       arrivedAt: step.arrivedAt,
       reportedAt: now,
     };
+    this.endFor(driverId);
     return Ok(undefined);
   }
 
@@ -760,6 +777,12 @@ export class RideEntity extends AggregateRoot<RideProps> {
     };
     this.replaceOffer(expired);
     return Ok(expired);
+  }
+
+  // Told once saved: the driver module checks their documents, never in the
+  // ride's way. Spec docs/specs/documents-du-chauffeur.md, point 15.
+  private endFor(driverId: string): void {
+    this.addEvent(new RideEndedDomainEvent({ aggregateId: this.id, driverId }));
   }
 
   validate(): void {

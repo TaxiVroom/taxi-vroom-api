@@ -1,6 +1,7 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { QueryBase } from '@libs/ddd/query.base';
 import { PrismaService } from '@libs/db/prisma.service';
+import { lastParisDayBefore } from '@libs/utils/paris-day';
 import {
   DocumentReviewResultDto,
   UploadedDocumentResponseDto,
@@ -40,6 +41,11 @@ export class GetDriverDocumentsQueryHandler implements IQueryHandler {
         doc.status as unknown as DocumentStatus, // FIXME: Not use as unknown
         doc.rejectionEvents[0]?.reason ?? null,
       );
+      // Shown again when the sheet opens. Spec
+      // docs/specs/documents-du-chauffeur.md, point 2.
+      dto.lastValidDay = doc.expiresAt
+        ? lastParisDayBefore(doc.expiresAt)
+        : null;
       return dto;
     });
   }

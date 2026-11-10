@@ -1,10 +1,14 @@
-import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
-import { addMinutes } from 'date-fns';
+import { IQueryHandler, QueryBus, QueryHandler } from '@nestjs/cqrs';
+import { addMinutes, isBefore } from 'date-fns';
 import { distanceBetween } from 'geofire-common';
 import { PrismaService } from '@libs/db/prisma.service';
 import { QueryBase } from '@libs/ddd/query.base';
 import { RideEntity } from '@modules/ride/domain/ride.entity';
 import { RideKind, RideStatus } from '@src/generated/prisma/client';
+import {
+  DriverDocumentStatesReadModel,
+  GetDriverDocumentStatesQuery,
+} from '@modules/driver/queries/get-driver-document-states/get-driver-document-states.query-handler';
 
 export class FindAvailableBookingsQuery extends QueryBase {
   readonly driverId: string;
@@ -86,10 +90,14 @@ const metersPerLatitudeDegree = 111_320;
 
 // The bookings no driver committed to and this driver did not refuse, whose
 // pickup is within reach of the driver and that do not start within the next
-// 30 min. The soonest first.
+// 30 min, nor after the end of one of their documents (the app tells why,
+// from GET drivers/me/documents). The soonest first.
 @QueryHandler(FindAvailableBookingsQuery)
 export class FindAvailableBookingsQueryHandler implements IQueryHandler {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly queryBus: QueryBus,
+  ) {}
 
   async execute(query: FindAvailableBookingsQuery): Promise<DriverBooking[]> {
     const { latitude, longitude } = query;
@@ -131,6 +139,13 @@ export class FindAvailableBookingsQueryHandler implements IQueryHandler {
           1000 <=
         radius,
     );
-    return toDriverBookings(withinReach);
+    const [documents]: DriverDocumentStatesReadModel[] =
+      await this.queryBus.execute(
+        new GetDriverDocumentStatesQuery({ driverIds: [query.driverId] }),
+      );
+    const until = documents.inOrderUntil;
+    return toDriverBookings(withinReach).filter(
+      (booking) => !until || isBefore(booking.pickupAt, until),
+    );
   }
 }

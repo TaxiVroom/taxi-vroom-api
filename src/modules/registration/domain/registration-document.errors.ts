@@ -20,6 +20,28 @@ export class DocumentTypeNotFoundError extends ExceptionBase {
   }
 }
 
+// The type expires: its date of end of validity is asked. Spec
+// docs/specs/documents-du-chauffeur.md.
+export class DocumentExpiryRequiredError extends ExceptionBase {
+  static readonly message = "Date d'expiration requise";
+
+  readonly code = 'REGISTRATION_DOCUMENT.EXPIRY_REQUIRED';
+
+  constructor(cause?: Error, metadata?: unknown) {
+    super(DocumentExpiryRequiredError.message, cause, metadata);
+  }
+}
+
+export class DocumentExpiredError extends ExceptionBase {
+  static readonly message = 'Ce document a déjà expiré';
+
+  readonly code = 'REGISTRATION_DOCUMENT.EXPIRED';
+
+  constructor(cause?: Error, metadata?: unknown) {
+    super(DocumentExpiredError.message, cause, metadata);
+  }
+}
+
 export class DocumentBackRequiredError extends ExceptionBase {
   static readonly message = 'Back side is required for this document type';
 

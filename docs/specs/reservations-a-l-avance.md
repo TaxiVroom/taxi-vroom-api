@@ -521,6 +521,14 @@ Décision du user, 2026-11-04 : les tests non cochés de l'étape 6.7 (notificat
 - [ ] Désistement du chauffeur, puis annulation du passager : notifications et listes à jour
 - [ ] Redémarrer l'API entre la réservation et le départ : la course part quand même
 
+### Correctif : charger les réservations à l'ouverture de l'onglet (2026-11-08)
+
+Trouvé au test d'un chauffeur neuf (C7, émulateur réinitialisé) : à l'ouverture de l'accueil, l'onglet « Réservations » chargeait ses réservations sans être affiché, et lisait la position en même temps que l'onglet « Conduire ». La permission n'étant pas encore accordée, les deux la demandaient ensemble ; Android n'en montre qu'une (« Can request only one set of permissions at a time ») et la demande de « Conduire » restait sans réponse : roue sans fin. La position sert à ne montrer que les réservations proches du chauffeur (`bookingsVisibleRadiusMeters`), pas à une carte.
+
+- Décision du user, 2026-11-08 : charger les réservations **seulement quand le chauffeur ouvre l'onglet « Réservations »** (choix 1). Écarté : réutiliser la position déjà lue par l'accueil (choix 2).
+- [x] Mobile : les réservations ne sont plus chargées à la création de l'accueil, seulement à l'ouverture de l'onglet (go du user, 2026-11-08). Aussi, choix techniques : une seule demande de permission de localisation à la fois pour toute l'app (`DeviceLocationDataSourceImpl`), une limite de 15 s sur la lecture de la position (`timeLimit`, doc de geolocator 14.1.0), et, après un refus définitif, « Ouvrir les réglages » sur l'accueil chauffeur (`openAppSettings`), validé par le user le 2026-11-08
+- [x] Vérifications : `dart format`, `flutter analyze` sur les fichiers touchés (aucune erreur ni avertissement), tests verts, lint Bloc à ses 6 alertes
+
 ### Fin de feature
 
 - [x] Mettre à jour `.aimemory` dans les deux dépôts et compresser `done.md`

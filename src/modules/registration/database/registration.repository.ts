@@ -8,9 +8,11 @@ import { PrismaErrorCode } from '@libs/db/prisma-error.codes';
 import type { RegistrationGetPayload } from '@src/generated/prisma/models';
 import { RegistrationEntity } from '../domain/registration.entity';
 import {
+  DriverRegistrationStep,
   RegistrationBaseProps,
   RegistrationRole,
 } from '../domain/registration.types';
+import { DriverRegistrationEntity } from '../domain/driver-registration.entity';
 import { RegistrationMapper } from '../registration.mapper';
 import { RegistrationRepositoryPort } from './registration.repository.port';
 
@@ -94,6 +96,34 @@ export class RegistrationRepository
       );
     }
     return None;
+  }
+
+  async findPendingReviewWithout(
+    documentTypeId: string,
+  ): Promise<DriverRegistrationEntity[]> {
+    const results: RegistrationWithIncludes[] =
+      await this.client.registration.findMany({
+        where: {
+          driver: {
+            currentStep: DriverRegistrationStep.PENDING_REVIEW,
+            registrationDocuments: { none: { documentTypeId } },
+          },
+        },
+        include: { passenger: true, driver: { include: { vehicle: true } } },
+      });
+    return results.flatMap((result) =>
+      result.driver
+        ? [
+            this.mapper.toDomain(
+              this.flattenRecord(
+                result,
+                result.driver.currentStep,
+                result.driver.vehicle,
+              ),
+            ) as DriverRegistrationEntity,
+          ]
+        : [],
+    );
   }
 
   async insert(

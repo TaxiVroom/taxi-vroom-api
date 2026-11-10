@@ -9,6 +9,8 @@ export interface RegistrationDocumentReadModel {
   documentTypeId: string;
   frontFilePath: string;
   backFilePath: string | null;
+  // Null when the document type does not expire.
+  expiresAt: Date | null;
 }
 
 export class FindRegistrationDocumentsQuery extends QueryBase {
@@ -33,12 +35,14 @@ export class FindRegistrationDocumentsQueryHandler implements IQueryHandler {
         documentTypeId: true,
         frontFilePath: true,
         backFilePath: true,
+        expiresAt: true,
       },
     });
     return documents.map((document) => ({
       documentTypeId: document.documentTypeId,
       frontFilePath: document.frontFilePath,
       backFilePath: document.backFilePath,
+      expiresAt: document.expiresAt,
     }));
   }
 }

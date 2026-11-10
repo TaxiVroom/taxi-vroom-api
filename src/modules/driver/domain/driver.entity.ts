@@ -1,6 +1,8 @@
 import { randomUUID } from 'crypto';
+import { Err, Ok, Result } from 'oxide.ts';
 import { AggregateID, AggregateRoot } from '@libs/ddd';
 import { CreateDriverProps, DriverProps } from './driver.types';
+import { DriverDocumentsBlockingError } from './driver.errors';
 
 export class DriverEntity extends AggregateRoot<DriverProps> {
   protected readonly _id: AggregateID;
@@ -18,6 +20,16 @@ export class DriverEntity extends AggregateRoot<DriverProps> {
         })),
       },
     });
+  }
+
+  // A document expired or missing keeps the driver offline; a ride in
+  // progress is never stopped for it. Spec
+  // docs/specs/documents-du-chauffeur.md, point 8.
+  static goOnline(
+    documentsBlock: boolean,
+  ): Result<null, DriverDocumentsBlockingError> {
+    if (documentsBlock) return Err(new DriverDocumentsBlockingError());
+    return Ok(null);
   }
 
   validate(): void {}

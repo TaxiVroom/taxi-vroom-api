@@ -1,6 +1,6 @@
 import { OnEvent } from '@nestjs/event-emitter';
 import { Inject, Injectable } from '@nestjs/common';
-import { QueryBus } from '@nestjs/cqrs';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Option } from 'oxide.ts';
 import { UserCreatedDomainEvent } from '@modules/user/domain/events/user-created.domain-event';
 import { DriverRepositoryPort } from '@modules/driver/database/driver.repository.port';
@@ -15,6 +15,7 @@ import {
   FindRegistrationDocumentsQuery,
   RegistrationDocumentReadModel,
 } from '@modules/registration/queries/find-registration-documents/find-registration-documents.query-handler';
+import { ScheduleDocumentJobsCommand } from '@modules/driver/commands/schedule-document-jobs/schedule-document-jobs.command';
 
 @Injectable()
 export class CreateDriverWhenUserIsCreatedDomainEventHandler {
@@ -22,11 +23,13 @@ export class CreateDriverWhenUserIsCreatedDomainEventHandler {
     @Inject(DRIVER_REPOSITORY)
     private readonly driverRepo: DriverRepositoryPort,
     private readonly queryBus: QueryBus,
+    private readonly commandBus: CommandBus,
   ) {}
 
   // The vehicle and the validated documents of the registration become the
-  // driver's. Specs docs/specs/vehicule-du-chauffeur.md and
-  // docs/specs/inscription-chauffeur.md.
+  // driver's, with the reminders and the expiry of each document. Specs
+  // docs/specs/vehicule-du-chauffeur.md, docs/specs/inscription-chauffeur.md
+  // and docs/specs/documents-du-chauffeur.md.
   @OnEvent(UserCreatedDomainEvent.name, { async: true, promisify: true })
   async handle(event: UserCreatedDomainEvent): Promise<void> {
     if (event.role !== UserRoles.driver) return;
@@ -47,5 +50,13 @@ export class CreateDriverWhenUserIsCreatedDomainEventHandler {
     // transaction opened here would clear the shared one when it ends, and
     // the other handlers would write outside it (2026-11-06).
     await this.driverRepo.insert(driver);
+    await this.commandBus.execute(
+      new ScheduleDocumentJobsCommand({
+        documents: documents.map((document) => ({
+          ...document,
+          driverId: userId,
+        })),
+      }),
+    );
   }
 }

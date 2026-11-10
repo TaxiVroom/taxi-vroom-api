@@ -13,6 +13,7 @@ export type RegistrationDocumentModel = {
   documentTypeId: string;
   frontFilePath: string;
   backFilePath: string | null;
+  expiresAt: Date | null;
   status: DocumentStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -35,6 +36,7 @@ export class RegistrationDocumentMapper
       documentTypeId: props.documentTypeId,
       frontFilePath: props.frontFilePath,
       backFilePath: props.backFilePath,
+      expiresAt: props.expiresAt,
       status: props.status,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
@@ -51,6 +53,7 @@ export class RegistrationDocumentMapper
         documentTypeId: record.documentTypeId,
         frontFilePath: record.frontFilePath,
         backFilePath: record.backFilePath,
+        expiresAt: record.expiresAt,
         status: record.status,
       } satisfies RegistrationDocumentProps,
     });

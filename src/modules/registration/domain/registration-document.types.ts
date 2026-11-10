@@ -9,6 +9,8 @@ export interface RegistrationDocumentProps {
   documentTypeId: string;
   frontFilePath: string;
   backFilePath: string | null;
+  // Null when the document type does not expire.
+  expiresAt: Date | null;
   status: DocumentStatus;
 }
 
@@ -17,6 +19,12 @@ export interface CreateRegistrationDocumentProps {
   documentTypeId: string;
   frontFilePath: string;
   backFilePath: string | null;
+  expiresAt: Date | null;
+}
+
+// What the document's type asks for.
+export interface RegistrationDocumentTypeRules {
+  expires: boolean;
 }
 
 export const MIME_TYPE_TO_EXTENSION: Record<string, string> = {

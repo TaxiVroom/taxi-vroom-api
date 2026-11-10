@@ -9,7 +9,10 @@ import { RegisteredUser } from '@modules/auth/domain/authenticated-user';
 import { Roles } from '@modules/auth/roles.decorator';
 import { UserRoles } from '@modules/user/domain/user.types';
 import { DriverVehicleResponseDto } from '@modules/driver/dtos/driver-vehicle.response.dto';
-import { FindMyVehicleQuery } from './find-my-vehicle.query-handler';
+import {
+  DriverVehicleReadModel,
+  FindMyVehicleQuery,
+} from './find-my-vehicle.query-handler';
 
 @Controller(routesV1.version)
 export class FindMyVehicleHttpController {
@@ -27,11 +30,18 @@ export class FindMyVehicleHttpController {
   async findMyVehicle(
     @CurrentUser() user: RegisteredUser,
   ): Promise<DriverVehicleResponseDto> {
-    const vehicle: Option<DriverVehicleResponseDto> =
-      await this.queryBus.execute(
-        new FindMyVehicleQuery({ driverId: user.id }),
-      );
-    if (vehicle.isNone()) throw new NotFoundException('No vehicle yet');
-    return vehicle.unwrap();
+    const found: Option<DriverVehicleReadModel> = await this.queryBus.execute(
+      new FindMyVehicleQuery({ driverId: user.id }),
+    );
+    if (found.isNone()) throw new NotFoundException('No vehicle yet');
+    const vehicle = found.unwrap();
+    const response = new DriverVehicleResponseDto();
+    response.model = vehicle.model;
+    response.color = vehicle.color;
+    response.plate = vehicle.plate;
+    response.adsNumber = vehicle.adsNumber;
+    response.communeCode = vehicle.communeCode;
+    response.communeName = vehicle.communeName;
+    return response;
   }
 }

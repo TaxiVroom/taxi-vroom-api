@@ -1,30 +1,37 @@
 import { Inject } from '@nestjs/common';
-import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler, QueryBus } from '@nestjs/cqrs';
 import { Err, Ok, Result } from 'oxide.ts';
 import { ConflictException } from '@libs/exceptions';
 import { RideEntity } from '@modules/ride/domain/ride.entity';
 import {
   RideBookingOverlapError,
   RideBookingTakenError,
+  RideDriverDocumentsEndBeforeError,
   RideNotFoundError,
   RideWrongStepError,
 } from '@modules/ride/domain/ride.errors';
 import { RideRepositoryPort } from '@modules/ride/database/ride.repository.port';
 import { RIDE_REPOSITORY } from '@modules/ride/ride.di-tokens';
 import { RideNotifier } from '@modules/ride/application/ride-notifier';
+import {
+  DriverDocumentStatesReadModel,
+  GetDriverDocumentStatesQuery,
+} from '@modules/driver/queries/get-driver-document-states/get-driver-document-states.query-handler';
 import { AcceptBookingCommand } from './accept-booking.command';
 
 export type AcceptBookingError =
   | RideNotFoundError
   | RideWrongStepError
   | RideBookingTakenError
-  | RideBookingOverlapError;
+  | RideBookingOverlapError
+  | RideDriverDocumentsEndBeforeError;
 
 @CommandHandler(AcceptBookingCommand)
 export class AcceptBookingService implements ICommandHandler {
   constructor(
     @Inject(RIDE_REPOSITORY) private readonly rideRepo: RideRepositoryPort,
     private readonly notifier: RideNotifier,
+    private readonly queryBus: QueryBus,
   ) {}
 
   async execute(
@@ -57,9 +64,14 @@ export class AcceptBookingService implements ICommandHandler {
       command.driverId,
       ride.id,
     );
+    const [documents]: DriverDocumentStatesReadModel[] =
+      await this.queryBus.execute(
+        new GetDriverDocumentStatesQuery({ driverIds: [command.driverId] }),
+      );
     const accepted = ride.acceptBooking(
       command.driverId,
       otherPickupTimes,
+      documents.inOrderUntil,
       new Date(),
     );
     if (accepted.isErr()) return Err(accepted.unwrapErr());

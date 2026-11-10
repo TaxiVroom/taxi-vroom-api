@@ -11,7 +11,7 @@ export class GetDocumentTypesQueryHandler implements IQueryHandler {
 
   async execute(): Promise<DocumentTypeResponseDto[]> {
     return this.prisma.documentType.findMany({
-      select: { id: true, name: true, backRequired: true },
+      select: { id: true, name: true, backRequired: true, expires: true },
       orderBy: { name: 'asc' },
     });
   }

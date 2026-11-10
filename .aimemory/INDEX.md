@@ -15,4 +15,5 @@ rating: passenger rating and ride history shipped, spec docs/specs/notation-et-h
 push: shipped on Android, iOS waits for hardware, spec docs/specs/notifications-push.md
 bookings: advance bookings shipped, spec docs/specs/reservations-a-l-avance.md
 pickupPlace: the passenger chooses the pickup, API unchanged (names it with the Géoplateforme), spec docs/specs/point-de-prise-en-charge.md
+documents: drivers' documents shipped (expiry, renewal, blocking, Graphile Worker jobs), spec docs/specs/documents-du-chauffeur.md
 next: to choose with the user; ideas noted for later in docs/a-faire.md

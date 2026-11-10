@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { QueryBus } from '@nestjs/cqrs';
 import { ConflictException } from '@libs/exceptions';
 import { RideEntity } from '@modules/ride/domain/ride.entity';
 import { DriverCandidate } from '@modules/ride/domain/ride.types';
@@ -8,6 +9,10 @@ import { DriverLocatorPort, OnlineDriver } from './ports/driver-locator.port';
 import { RideNotifier } from './ride-notifier';
 import { RideOfferTimer } from './ride-offer-timer';
 import { RidePublisher } from './ride-publisher';
+import {
+  DriverDocumentStatesReadModel,
+  GetDriverDocumentStatesQuery,
+} from '@modules/driver/queries/get-driver-document-states/get-driver-document-states.query-handler';
 
 // When two rides pick the same driver at the same time, the database lets
 // one through: the other one tries the next driver.
@@ -24,15 +29,17 @@ export class RideDispatcher {
     private readonly publisher: RidePublisher,
     private readonly offerTimer: RideOfferTimer,
     private readonly notifier: RideNotifier,
+    private readonly queryBus: QueryBus,
   ) {}
 
   async offerToNextDriver(ride: RideEntity): Promise<void> {
     const { latitude, longitude } = ride.getProps().origin;
-    const onlineDrivers = await this.driverLocator.findOnlineDriversAround(
+    const around = await this.driverLocator.findOnlineDriversAround(
       latitude,
       longitude,
       RideEntity.reachableRadiusMeters,
     );
+    const onlineDrivers = await this.withoutBlockedDocuments(around);
     const takenByOtherRides = new Set<string>();
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
@@ -43,6 +50,24 @@ export class RideDispatcher {
         }
       }
     }
+  }
+
+  // A document expired or missing: no ride offered, even if still shown
+  // online. One read for all the candidates. Spec
+  // docs/specs/documents-du-chauffeur.md, point 8.
+  private async withoutBlockedDocuments(
+    drivers: OnlineDriver[],
+  ): Promise<OnlineDriver[]> {
+    if (drivers.length === 0) return drivers;
+    const states: DriverDocumentStatesReadModel[] = await this.queryBus.execute(
+      new GetDriverDocumentStatesQuery({
+        driverIds: drivers.map((driver) => driver.driverId),
+      }),
+    );
+    const blocked = new Set(
+      states.filter((state) => state.isBlocked).map((state) => state.driverId),
+    );
+    return drivers.filter((driver) => !blocked.has(driver.driverId));
   }
 
   private async tryOffer(

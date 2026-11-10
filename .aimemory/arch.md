@@ -40,6 +40,7 @@ RidePublisher>uses>RideRealtime
 RideOfferTimer>dispatches ExpireRideOfferCommand>RideModule
 
 #B key=value
+jobQueue=Graphile Worker chosen by the user 2026-11-07 for scheduled jobs (documents reminders and expiry): tasks in Postgres, run by a worker inside the NestJS server, jobKey to replace or remove; BullMQ rejected (needs Redis, outside our Postgres transactions, volume too small to need it), pg-boss rejected (cancel by generated id); full reasons in docs/specs/documents-du-chauffeur.md, point 12; not installed yet; jobs only act (pushes, offline), they write no state: a document's state is computed from documents.expiresAt and document_types.requiredFrom (point 13)
 stack=NestJS+Prisma7+Postgres+CQRS+DDD+FirebaseAdmin(Auth,RTDB,Storage)+MapboxDirections+geo.api.gouv.fr+calendrier.api.gouv.fr
 http=all routes under /v1; GraphQL at /graphql; Swagger at /docs
 routesRide=POST rides (estimate), rides/:id/request, accept, decline, arrive, start, complete, cancel, withdraw, no-show, rating; GET rides (passenger's completed rides), GET rides/current (passenger or driver, 404 without one), GET rides/:id/boarding-code

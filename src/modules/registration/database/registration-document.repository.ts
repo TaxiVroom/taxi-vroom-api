@@ -49,6 +49,7 @@ export class RegistrationDocumentRepository
       update: {
         frontFilePath: props.frontFilePath,
         backFilePath: props.backFilePath,
+        expiresAt: props.expiresAt,
       },
     });
   }

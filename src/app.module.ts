@@ -12,6 +12,7 @@ import { ExceptionInterceptor } from '@libs/application/interceptors/exception.i
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { PrismaModule } from '@libs/db/prisma.module';
+import { JobsModule } from '@libs/jobs/jobs.module';
 import { AuthModule } from '@modules/auth/auth.module';
 import { RegistrationModule } from '@modules/registration/registration.module';
 import { PassengerModule } from '@modules/passenger/passenger.module';
@@ -56,6 +57,7 @@ const interceptors = [
     RideModule,
     NotificationModule,
     PrismaModule,
+    JobsModule,
   ],
   controllers: [],
   providers: [...interceptors],

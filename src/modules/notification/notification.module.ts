@@ -4,6 +4,8 @@ import { RegisterPushTokenHttpController } from './commands/register-push-token/
 import { RegisterPushTokenService } from './commands/register-push-token/register-push-token.service';
 import { UnregisterPushTokenHttpController } from './commands/unregister-push-token/unregister-push-token.http.controller';
 import { UnregisterPushTokenService } from './commands/unregister-push-token/unregister-push-token.service';
+import { RegistrationValidatedPushTask } from './application/registration-validated-push.task';
+import { SendPushToUsersService } from './commands/send-push-to-users/send-push-to-users.service';
 import { SendPushService } from './commands/send-push/send-push.service';
 import { PushRegistrationRepository } from './database/push-registration.repository';
 import { FirebasePushSenderAdapter } from './infrastructure/firebase-push-sender.adapter';
@@ -27,6 +29,7 @@ const commandHandlers: Provider[] = [
   RegisterPushTokenService,
   UnregisterPushTokenService,
   SendPushService,
+  SendPushToUsersService,
 ];
 
 const mappers: Provider[] = [PushRegistrationMapper];
@@ -46,6 +49,7 @@ const adapters: Provider[] = [
   imports: [CqrsModule],
   controllers: [...httpControllers],
   providers: [
+    RegistrationValidatedPushTask,
     ...commandHandlers,
     ...eventHandlers,
     ...mappers,

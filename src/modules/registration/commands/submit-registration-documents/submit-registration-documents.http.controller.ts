@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Body,
+  UnprocessableEntityException,
   Controller,
   HttpStatus,
   Logger,
@@ -17,9 +18,12 @@ import { routesV1 } from '@config/app.routes';
 import { CurrentUser } from '@modules/auth/current-user.decorator';
 import { GuestUser } from '@modules/auth/domain/authenticated-user';
 import { ApiErrorResponse } from '@libs/api/api-error.response';
+import { endOfParisDay } from '@libs/utils/paris-day';
 import { RegistrationDocumentResponseDto } from '@modules/registration/dtos/registration-document.response.dto';
 import {
   DocumentBackRequiredError,
+  DocumentExpiredError,
+  DocumentExpiryRequiredError,
   DocumentTypeNotFoundError,
   UnsupportedFileTypeError,
 } from '@modules/registration/domain/registration-document.errors';
@@ -47,6 +51,12 @@ export class SubmitRegistrationDocumentsHttpController {
   })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, type: ApiErrorResponse })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, type: ApiErrorResponse })
+  @ApiResponse({
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    description:
+      'REGISTRATION_DOCUMENT.EXPIRY_REQUIRED or REGISTRATION_DOCUMENT.EXPIRED',
+    type: ApiErrorResponse,
+  })
   @Post(routesV1.registrationFlow.documents)
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -119,6 +129,8 @@ export class SubmitRegistrationDocumentsHttpController {
       | DocumentTypeNotFoundError
       | DocumentBackRequiredError
       | UnsupportedFileTypeError
+      | DocumentExpiryRequiredError
+      | DocumentExpiredError
     > = await this.commandBus.execute(
       new SubmitRegistrationDocumentsCommand({
         userId: user.id,
@@ -128,6 +140,9 @@ export class SubmitRegistrationDocumentsHttpController {
           : null,
         backFile: backFile
           ? { buffer: backFile.buffer, mimeType: backFile.mimetype }
+          : null,
+        expiresAt: body.expiresAt
+          ? endOfParisDay(body.expiresAt.slice(0, 10))
           : null,
       }),
     );
@@ -147,6 +162,15 @@ export class SubmitRegistrationDocumentsHttpController {
         );
         if (error instanceof RegistrationNotFoundError) {
           throw new NotFoundException(error.message);
+        }
+        if (
+          error instanceof DocumentExpiryRequiredError ||
+          error instanceof DocumentExpiredError
+        ) {
+          throw new UnprocessableEntityException({
+            message: error.message,
+            code: error.code,
+          });
         }
         if (
           error instanceof DocumentTypeNotFoundError ||

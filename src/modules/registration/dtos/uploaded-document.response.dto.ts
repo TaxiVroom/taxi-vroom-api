@@ -20,4 +20,11 @@ export class UploadedDocumentResponseDto {
 
   @ApiProperty({ type: DocumentReviewResultDto })
   reviewResult: DocumentReviewResultDto;
+
+  @ApiProperty({
+    example: '2026-11-20',
+    nullable: true,
+    description: 'Its last valid day, in Paris, as the driver typed it',
+  })
+  lastValidDay: string | null;
 }

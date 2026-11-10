@@ -181,6 +181,19 @@ export class RideBookingTakenError extends ExceptionBase {
 }
 
 // The driver could not be on time for both pickups.
+// One of the driver's documents ends before the pickup. Spec
+// docs/specs/documents-du-chauffeur.md.
+export class RideDriverDocumentsEndBeforeError extends ExceptionBase {
+  static readonly message =
+    'Un de vos documents expire avant cette prise en charge';
+
+  readonly code = 'RIDE.DRIVER_DOCUMENTS_END_BEFORE';
+
+  constructor(cause?: Error, metadata?: unknown) {
+    super(RideDriverDocumentsEndBeforeError.message, cause, metadata);
+  }
+}
+
 export class RideBookingOverlapError extends ExceptionBase {
   static readonly message =
     'Another booking of this driver is less than an hour away';

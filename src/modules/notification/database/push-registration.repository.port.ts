@@ -10,5 +10,8 @@ export interface PushRegistrationRepositoryPort
 
   findTokenByUserId(userId: string): Promise<Option<string>>;
 
+  // userId → token, for those who have a phone, in one read.
+  findTokensByUserIds(userIds: string[]): Promise<Map<string, string>>;
+
   deleteByUserId(userId: string): Promise<void>;
 }

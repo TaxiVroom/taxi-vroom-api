@@ -105,6 +105,12 @@ Aucune route nouvelle ni changée : la copie se fait dans la création du compte
 - Le rôle admin sur la route de validation (n'importe quel jeton Firebase y passe).
 - L'inscription du passager.
 
+### Ajout prévu par `documents-du-chauffeur.md`
+
+Décidé par le user le 2026-11-07 (point 2 de `documents-du-chauffeur.md`) : à l'écran « Mes documents » de l'inscription, le chauffeur saisit aussi la date d'expiration des types qui expirent ; l'admin la vérifie sur la photo et peut la corriger en validant ; elle est recopiée dans les documents du chauffeur avec eux. Codé avec `documents-du-chauffeur.md`, dans son plan.
+
+Décidé aussi par le user le 2026-11-07 (point 6 de `documents-du-chauffeur.md`) : un type de document ajouté est demandé aux inscriptions en cours ; une inscription qui attend la validation sans lui revient à l'étape `DOCUMENTS`, reçoit « Un nouveau document est demandé », et l'app rouvre « Mes documents » avec ce message.
+
 ## À valider
 
 1. **Les chauffeurs déjà validés. Validé par le user, 2026-11-07, tel que proposé.** Les chauffeurs 3 et 4 (et les plus anciens) ont un compte sans documents dans `documents`. Ce sont des comptes de test, l'app n'est pas encore sortie. Proposé : rien pour eux, comme pour le véhicule (point 5 de `vehicule-du-chauffeur.md`) ; un nouveau chauffeur de test aura ses documents. Écarté : une migration de données qui les recopie, du SQL écrit à la main dans `migration.sql` (contraire à `prismaOnlySchema`) pour des comptes qui n'existeront pas en production. J'avais d'abord proposé de les recopier, avant de voir qu'il n'y a que des comptes de test.

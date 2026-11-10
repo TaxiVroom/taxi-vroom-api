@@ -19,8 +19,10 @@ import { SaveRegistrationVehicleHttpController } from './commands/save-registrat
 import { SaveRegistrationVehicleService } from './commands/save-registration-vehicle/save-registration-vehicle.service';
 import { SaveRegistrationPushTokenHttpController } from './commands/save-registration-push-token/save-registration-push-token.http.controller';
 import { SaveRegistrationPushTokenService } from './commands/save-registration-push-token/save-registration-push-token.service';
+import { AskNewDocumentService } from './commands/ask-new-document/ask-new-document.service';
 import { ForgetPushTokenWhenUserIsCreatedDomainEventHandler } from './application/event-handlers/forget-push-token-when-user-is-created.domain-event-handler';
 import { FindRegistrationPushTokenQueryHandler } from './queries/find-registration-push-token/find-registration-push-token.query-handler';
+import { FindRegistrationPushTokensQueryHandler } from './queries/find-registration-push-token/find-registration-push-tokens.query-handler';
 import { CompleteRegistrationHttpController } from './commands/complete-registration/complete-registration.http.controller';
 import { CompleteRegistrationService } from './commands/complete-registration/complete-registration.service';
 import { SubmitRegistrationDocumentsHttpController } from './commands/submit-registration-documents/submit-registration-documents.http.controller';
@@ -59,6 +61,7 @@ const commandHandlers: Provider[] = [
   CompleteRegistrationService,
   SubmitRegistrationDocumentsService,
   ValidateRegistrationDocumentService,
+  AskNewDocumentService,
 ];
 
 const eventHandlers: Provider[] = [
@@ -74,6 +77,7 @@ const queryHandlers: Provider[] = [
   FindRegistrationVehicleQueryHandler,
   FindRegistrationDocumentsQueryHandler,
   FindRegistrationPushTokenQueryHandler,
+  FindRegistrationPushTokensQueryHandler,
 ];
 
 const mappers: Provider[] = [RegistrationMapper, RegistrationDocumentMapper];

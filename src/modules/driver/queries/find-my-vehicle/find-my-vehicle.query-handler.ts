@@ -2,7 +2,16 @@ import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { None, Option, Some } from 'oxide.ts';
 import { QueryBase } from '@libs/ddd/query.base';
 import { PrismaService } from '@libs/db/prisma.service';
-import { DriverVehicleResponseDto } from '@modules/driver/dtos/driver-vehicle.response.dto';
+
+// The vehicle as the account tab shows it; the controller maps it.
+export interface DriverVehicleReadModel {
+  model: string;
+  color: string;
+  plate: string;
+  adsNumber: string;
+  communeCode: string;
+  communeName: string;
+}
 
 export class FindMyVehicleQuery extends QueryBase {
   readonly driverId: string;
@@ -21,18 +30,18 @@ export class FindMyVehicleQueryHandler implements IQueryHandler {
 
   async execute(
     query: FindMyVehicleQuery,
-  ): Promise<Option<DriverVehicleResponseDto>> {
+  ): Promise<Option<DriverVehicleReadModel>> {
     const vehicle = await this.prisma.driverVehicle.findUnique({
       where: { driverId: query.driverId },
     });
     if (!vehicle) return None;
-    const response = new DriverVehicleResponseDto();
-    response.model = vehicle.model;
-    response.color = vehicle.color;
-    response.plate = vehicle.plate;
-    response.adsNumber = vehicle.adsNumber;
-    response.communeCode = vehicle.communeCode;
-    response.communeName = vehicle.communeName;
-    return Some(response);
+    return Some({
+      model: vehicle.model,
+      color: vehicle.color,
+      plate: vehicle.plate,
+      adsNumber: vehicle.adsNumber,
+      communeCode: vehicle.communeCode,
+      communeName: vehicle.communeName,
+    });
   }
 }

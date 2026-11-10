@@ -19,6 +19,7 @@ import { UserRoles } from '@modules/user/domain/user.types';
 import {
   RideBookingOverlapError,
   RideBookingTakenError,
+  RideDriverDocumentsEndBeforeError,
   RideNotFoundError,
   RideWrongStepError,
 } from '@modules/ride/domain/ride.errors';
@@ -60,6 +61,7 @@ export class AcceptBookingHttpController {
         if (
           error instanceof RideBookingTakenError ||
           error instanceof RideBookingOverlapError ||
+          error instanceof RideDriverDocumentsEndBeforeError ||
           error instanceof RideWrongStepError
         ) {
           throw new ConflictException({
