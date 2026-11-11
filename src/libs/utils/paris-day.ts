@@ -37,3 +37,14 @@ export function endOfParisDay(day: string): Date {
 export function lastParisDayBefore(end: Date): string {
   return parisDay.format(subMinutes(end, 1));
 }
+
+// 2027-03-11 at 00:00, Paris time.
+export function startOfParisDay(day: string): Date {
+  const midnightUtc = new Date(`${day}T00:00:00Z`);
+  return subMinutes(midnightUtc, offsetMinutesAt(midnightUtc));
+}
+
+// The day in Paris at that instant: "2027-03-11".
+export function parisDayOf(instant: Date): string {
+  return parisDay.format(instant);
+}

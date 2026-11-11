@@ -29,20 +29,6 @@ export class GetMyDocumentsHttpController {
       await this.queryBus.execute(
         new GetDriverDocumentStatesQuery({ driverIds: [user.id] }),
       );
-    return {
-      documents: states.documents.map((document) => ({
-        documentTypeId: document.documentTypeId,
-        name: document.name,
-        backRequired: document.backRequired,
-        expires: document.expires,
-        state: document.state,
-        expiresAt: document.expiresAt?.toISOString() ?? null,
-        lastValidDay: document.lastValidDay,
-        requiredFrom: document.requiredFrom?.toISOString() ?? null,
-        inReview: document.inReview,
-      })),
-      isBlocked: states.isBlocked,
-      inOrderUntil: states.inOrderUntil?.toISOString() ?? null,
-    };
+    return DriverDocumentsResponseDto.fromReadModel(states);
   }
 }

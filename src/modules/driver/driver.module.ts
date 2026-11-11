@@ -15,7 +15,7 @@ import { TakeDriverOfflineWhenRideEndedDomainEventHandler } from './application/
 import { DriverDocumentJobs } from './application/driver-document-jobs';
 import { DriverDocumentTasks } from './application/driver-document-tasks';
 import { FirebaseDriverOnlinePermissionAdapter } from './infrastructure/firebase-driver-online-permission.adapter';
-import { FindMyVehicleHttpController } from './queries/find-my-vehicle/find-my-vehicle.http.controller';
+import { GetMyAccountHttpController } from './queries/get-my-account/get-my-account.http.controller';
 import { FindMyVehicleQueryHandler } from './queries/find-my-vehicle/find-my-vehicle.query-handler';
 import { GetMyDocumentsHttpController } from './queries/get-driver-document-states/get-my-documents.http.controller';
 import { GetDriverDocumentStatesQueryHandler } from './queries/get-driver-document-states/get-driver-document-states.query-handler';
@@ -29,7 +29,7 @@ import { ScheduleDocumentJobsService } from './commands/schedule-document-jobs/s
 import { ValidateDriverDocumentService } from './commands/validate-driver-document/validate-driver-document.service';
 
 const httpControllers = [
-  FindMyVehicleHttpController,
+  GetMyAccountHttpController,
   GetMyDocumentsHttpController,
   GoOnlineHttpController,
   SubmitDriverDocumentHttpController,

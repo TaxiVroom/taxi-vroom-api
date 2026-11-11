@@ -69,6 +69,11 @@ import { FindMyRidesHttpController } from './queries/find-my-rides/find-my-rides
 import { FindMyRidesQueryHandler } from './queries/find-my-rides/find-my-rides.query-handler';
 import { GetBoardingCodeHttpController } from './queries/get-boarding-code/get-boarding-code.http.controller';
 import { GetBoardingCodeQueryHandler } from './queries/get-boarding-code/get-boarding-code.query-handler';
+import { GetMyEarningsHttpController } from './queries/get-my-earnings/get-my-earnings.http.controller';
+import { GetMyEarningsQueryHandler } from './queries/get-my-earnings/get-my-earnings.query-handler';
+import { GetMyActivityHttpController } from './queries/get-my-activity/get-my-activity.http.controller';
+import { GetMyRatingQueryHandler } from './queries/get-my-rating/get-my-rating.query-handler';
+import { GetMyAcceptanceRateQueryHandler } from './queries/get-my-acceptance-rate/get-my-acceptance-rate.query-handler';
 
 const httpControllers = [
   EstimateRideHttpController,
@@ -93,6 +98,8 @@ const httpControllers = [
   FindMyBookingsHttpController,
   FindAvailableBookingsHttpController,
   FindAcceptedBookingsHttpController,
+  GetMyEarningsHttpController,
+  GetMyActivityHttpController,
 ];
 
 const commandHandlers: Provider[] = [
@@ -124,6 +131,9 @@ const queryHandlers: Provider[] = [
   FindAvailableBookingsQueryHandler,
   FindAcceptedBookingsQueryHandler,
   FindDriversInRideQueryHandler,
+  GetMyEarningsQueryHandler,
+  GetMyRatingQueryHandler,
+  GetMyAcceptanceRateQueryHandler,
 ];
 
 const applicationServices: Provider[] = [

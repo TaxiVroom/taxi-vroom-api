@@ -13,6 +13,7 @@ const registrationDocumentTypesRoot = 'registration-document-types';
 const adminRoot = 'admin';
 const ridesRoot = 'rides';
 const bookingsRoot = 'bookings';
+const enterpriseContactRoot = 'enterprise-contact';
 
 // Api Versions
 const v1 = 'v1';
@@ -43,10 +44,12 @@ export const routesV1 = {
     root: passengersRoot,
   },
   driver: {
-    vehicle: `${driversRoot}/me/vehicle`,
+    account: `${driversRoot}/me/account`,
     documents: `${driversRoot}/me/documents`,
     document: `${driversRoot}/me/documents/:documentTypeId`,
     online: `${driversRoot}/me/online`,
+    earnings: `${driversRoot}/me/earnings`,
+    activity: `${driversRoot}/me/activity`,
   },
   notification: {
     pushRegistration: 'me/push-registration',
@@ -54,6 +57,9 @@ export const routesV1 = {
   admin: {
     validateRegistrationDocument: `${adminRoot}/registration-documents/:documentId/validate`,
     validateDriverDocument: `${adminRoot}/driver-documents/:submissionId/validate`,
+  },
+  enterpriseContact: {
+    root: enterpriseContactRoot,
   },
   booking: {
     available: `${bookingsRoot}/available`,

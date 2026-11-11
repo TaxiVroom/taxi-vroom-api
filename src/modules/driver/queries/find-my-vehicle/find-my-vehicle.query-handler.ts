@@ -22,8 +22,8 @@ export class FindMyVehicleQuery extends QueryBase {
   }
 }
 
-// The account tab's vehicle. None for a driver registered before the
-// "Votre taxi" step existed.
+// The "Compte" tab's vehicle (GET drivers/me/account). None for a driver
+// registered before the "Votre taxi" step existed.
 @QueryHandler(FindMyVehicleQuery)
 export class FindMyVehicleQueryHandler implements IQueryHandler {
   constructor(private readonly prisma: PrismaService) {}

@@ -16,4 +16,7 @@ push: shipped on Android, iOS waits for hardware, spec docs/specs/notifications-
 bookings: advance bookings shipped, spec docs/specs/reservations-a-l-avance.md
 pickupPlace: the passenger chooses the pickup, API unchanged (names it with the Géoplateforme), spec docs/specs/point-de-prise-en-charge.md
 documents: drivers' documents shipped (expiry, renewal, blocking, Graphile Worker jobs), spec docs/specs/documents-du-chauffeur.md
+account: GET me (profile) and GET drivers/me/account feed the "Compte" tabs, spec docs/specs/compte-a-jour.md
+contact: "Contacter le développeur" (both Compte tabs) calls CONTACT_PHONE through GET enterprise-contact, terms rows removed, spec docs/specs/aide-chauffeur.md
+earnings: driver "Gains" tab and "Conduire" figures real (GET drivers/me/earnings, drivers/me/activity), spec docs/specs/gains-reels.md; screen spec docs/specs/gains-du-chauffeur.md
 next: to choose with the user; ideas noted for later in docs/a-faire.md

@@ -141,6 +141,10 @@ Aucune.
 5. **Le 2e refus. Validé par le user, 2026-11-05.** Trouvé en relisant la doc de `permission_handler` avant de coder : sur Android, seul `request()` dit « refusée définitivement », y compris juste après le 2e refus dans la fenêtre. Le message s'affiche donc tout de suite à ce moment-là, au lieu d'attendre l'action suivante. Voir la décision « Après « Ne pas autoriser » ».
 6. **Le message du passager disparaîtrait. Validé par le user, 2026-11-05.** Trouvé en lisant le code avant l'étape 2 : un message en bas de l'écran est attaché à son écran, et l'app quitte le choix du taxi juste après la commande. Retenu : une fenêtre avant d'ouvrir la course, côté passager ; un message en bas, côté chauffeur. Voir « Messages ».
 7. **Un seul bloc pour la permission. Validé par le user, 2026-11-05.** Plutôt que de l'ajouter à trois blocs et aux deux onglets Compte, avec chacun son état et son événement « ouvrir les réglages » : `NotificationPermissionBloc`, prévenu par les pages. Voir « Nouveaux éléments ».
+8. **Désactiver depuis l'onglet Compte. Demandé par le user, 2026-11-11 :** « Activées » ne laisse rien faire, le passager et le chauffeur doivent pouvoir couper les notifications là. L'app ne peut pas retirer la permission elle-même, seul le téléphone le peut (point 4). Validé par le user, 2026-11-11 :
+   - ce que voit l'utilisateur : « Activées » suivi d'un bouton « Désactiver », de la même forme que « Activer » ; l'appui ouvre la page de l'app dans les réglages du téléphone (`openAppSettings()`, « Opens the app settings page », `permission_handler` 12.0.1), où « Notifications » est à un appui ; il les coupe, revient dans l'app, et la ligne affiche « Désactivées » avec « Activer » (relue au retour, déjà en place) ;
+   - mécanisme : l'événement `NotificationSettingsOpened` de `NotificationPermissionBloc`, déjà là ; seul `NotificationsRow` change ;
+   - écarté : un interrupteur propre à l'app, qui couperait les envois côté API en laissant la permission du téléphone, car il contredirait la décision « Stocker le choix » (le téléphone, seule source fiable) et ferait revenir un réglage en double, retiré le 2026-11-05.
 
 ## Plan
 
@@ -172,6 +176,12 @@ Décision du user, 2026-11-05 : pas testée pour l'instant, la feature étant pe
 - [ ] Chauffeur jamais sollicité : passer en ligne, la fenêtre s'affiche
 - [ ] Permission accordée : plus rien ne s'affiche
 - [ ] Pour revenir à zéro entre deux essais : `adb shell pm revoke <package> android.permission.POST_NOTIFICATIONS`, puis `adb shell pm clear-permission-flags <package> android.permission.POST_NOTIFICATIONS user-set user-fixed` ([doc Android](https://developer.android.com/develop/ui/views/notifications/notification-permission))
+
+### Étape 4 : « Désactiver » dans l'onglet Compte (mobile, point 8)
+
+- [x] `NotificationsRow` : « Activées » suivi de « Désactiver », qui envoie `NotificationSettingsOpened`
+- [x] Vérifications : `dart format` et `flutter analyze` sans remarque sur les fichiers touchés, 126 tests verts
+- [x] Test par le user sur Android, 2026-11-11 : « Désactiver » ouvre directement l'écran des notifications de l'app dans les réglages ; « ça fonctionne »
 
 ### Fin de feature
 

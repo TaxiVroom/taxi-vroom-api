@@ -1,5 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { DriverDocumentState } from '@modules/driver/queries/get-driver-document-states/get-driver-document-states.query-handler';
+import {
+  DriverDocumentState,
+  DriverDocumentStatesReadModel,
+} from '@modules/driver/queries/get-driver-document-states/get-driver-document-states.query-handler';
 
 export class DriverDocumentResponseDto {
   @ApiProperty({ example: 'ba2a7b6c-765c-4fda-a30b-b3485b8913ed' })
@@ -59,4 +62,25 @@ export class DriverDocumentsResponseDto {
 
   @ApiProperty({ example: '2030-03-11T00:00:00.000Z', nullable: true })
   inOrderUntil: string | null;
+
+  // One shape for "Vos documents" and the "Compte" tab.
+  static fromReadModel(
+    states: DriverDocumentStatesReadModel,
+  ): DriverDocumentsResponseDto {
+    return {
+      documents: states.documents.map((document) => ({
+        documentTypeId: document.documentTypeId,
+        name: document.name,
+        backRequired: document.backRequired,
+        expires: document.expires,
+        state: document.state,
+        expiresAt: document.expiresAt?.toISOString() ?? null,
+        lastValidDay: document.lastValidDay,
+        requiredFrom: document.requiredFrom?.toISOString() ?? null,
+        inReview: document.inReview,
+      })),
+      isBlocked: states.isBlocked,
+      inOrderUntil: states.inOrderUntil?.toISOString() ?? null,
+    };
+  }
 }

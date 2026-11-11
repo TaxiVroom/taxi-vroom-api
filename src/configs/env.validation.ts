@@ -17,6 +17,9 @@ const envSchema = z.object({
   // Demo only, never in production: a position without tariffs takes this
   // département's, e.g. "67", so testers outside the Bas-Rhin can order.
   FALLBACK_TARIFF_DEPARTMENT: z.string().min(1).optional(),
+  // The number "Nous contacter" calls, in E.164, e.g. "+33612345678". Kept
+  // here so it is in neither repo nor app. Spec docs/specs/aide-chauffeur.md.
+  CONTACT_PHONE: z.string().regex(/^\+\d{8,15}$/),
   NODE_ENV: z
     .enum(['development', 'production', 'test'])
     .default('development'),

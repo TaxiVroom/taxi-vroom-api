@@ -10,6 +10,7 @@ import { CreateUserGraphqlResolver } from './commands/create-user/graphql-exampl
 // import { CreateUserService } from './commands/create-user/create-user.service';
 import { DeleteUserService } from './commands/delete-user/delete-user.service';
 import { FindUsersQueryHandler } from './queries/find-users/find-users.query-handler';
+import { GetMyProfileQueryHandler } from './queries/get-me/get-my-profile.query-handler';
 import { UserMapper } from './user.mapper';
 import { CqrsModule } from '@nestjs/cqrs';
 import { USER_REPOSITORY } from './user.di-tokens';
@@ -39,7 +40,10 @@ const eventHandlers: Provider[] = [
 // const commandHandlers: Provider[] = [CreateUserService, DeleteUserService];
 const commandHandlers: Provider[] = [DeleteUserService];
 
-const queryHandlers: Provider[] = [FindUsersQueryHandler];
+const queryHandlers: Provider[] = [
+  FindUsersQueryHandler,
+  GetMyProfileQueryHandler,
+];
 
 const mappers: Provider[] = [UserMapper];
 

@@ -31,7 +31,7 @@ WatchPushedRidesUseCase : le même flux qu'aujourd'hui
 La carte affiche le nouvel état : « Jean viendra vous chercher », ou disparaît des « Acceptées »
 ```
 
-Les listes restent à l'écran pendant le rechargement : les deux blocs ne remettent le chargement que s'ils n'ont encore rien affiché.
+Pendant chaque rechargement, un rond remplace la liste, jusqu'à la réponse de l'API (validé par le user, 2026-11-11 : jamais d'ancienne valeur affichée pendant un appel). Remplace la première règle, qui gardait l'ancienne liste à l'écran.
 
 ### Décisions prises
 
