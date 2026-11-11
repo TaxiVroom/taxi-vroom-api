@@ -1,6 +1,6 @@
 # « Contacter le développeur »
 
-> Statut : feature close le 2026-11-11, testée par le user sur Android (appel et sous-titre en entier), non commitée. `npm run deps:validate` pas encore lancé ; cas « API arrêtée » non testé.
+> Statut : feature close le 2026-11-11, testée par le user sur Android (appel et sous-titre en entier), commitée (7043d73). `npm run deps:validate` : aucune nouvelle violation ; cas « API arrêtée » non testé.
 
 Concerne `taxi-vroom-api` et `taxi-vroom-mobile`. Cette spec vit dans l'API.
 
@@ -113,7 +113,7 @@ Une étape à la fois, avec une pause et ta validation entre chaque. Pour cette 
 - [x] `CONTACT_PHONE` dans `env.validation.ts` (format E.164 vérifié au démarrage) et `.env.example`
 - [x] Module `enterprise-contact` (`EnterpriseContactModule`, `GetEnterpriseContactHttpController`), `GET /v1/enterprise-contact`
 - [x] Vérifications : `npx tsc --noEmit` sans erreur, `npm run lint` à ses 9 erreurs habituelles
-- [ ] `npm run deps:validate` lancé par le user ; le user ajoute `CONTACT_PHONE` à son `.env`
+- [x] `npm run deps:validate` (2026-11-11, à la demande du user) : seulement les 5 violations anciennes, aucune nouvelle ; `CONTACT_PHONE` dans le `.env` du user (l'appel a marché à son test)
 
 ### Étape 2 : « Contacter le développeur » (mobile)
 

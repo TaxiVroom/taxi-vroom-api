@@ -1,6 +1,6 @@
 # Gains et chiffres du chauffeur : les vraies données
 
-> Statut : feature close le 2026-11-11 par le user (« ça fonctionne »), testée sur Android, non commitée. `npm run deps:validate` pas encore lancé ; API arrêtée non testée.
+> Statut : feature close le 2026-11-11 par le user (« ça fonctionne »), testée sur Android, commitée (7043d73 et mobile d14bd1c). `npm run deps:validate` : aucune nouvelle violation ; API arrêtée non testée.
 
 Concerne `taxi-vroom-api` et `taxi-vroom-mobile`. Cette spec vit dans l'API. Elle suit `gains-du-chauffeur.md`, qui a construit l'onglet « Gains » avec des données simulées.
 
@@ -183,7 +183,7 @@ Une étape à la fois, avec une pause et ta validation entre chaque. Pour cette 
 - [x] `GetMyEarningsQuery` et `GET drivers/me/earnings`, `period` validé (`IsEnum`)
 - [x] `GetMyRatingQuery`, `GetMyAcceptanceRateQuery` et `GET drivers/me/activity` ; la règle d'acceptation essayée en SQL sur la base de dev
 - [x] Vérifications : `npx tsc --noEmit` sans erreur, `npm run lint` à ses 9 erreurs habituelles
-- [ ] `npm run deps:validate` lancé par le user
+- [x] `npm run deps:validate` (2026-11-11, à la demande du user) : seulement les 5 violations anciennes, aucune nouvelle
 
 ### Étape 2 : l'onglet « Gains » (mobile)
 

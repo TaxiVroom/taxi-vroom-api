@@ -1,6 +1,6 @@
 # Working with the user
 
-Never run `npm` commands yourself (`npm run ...`, `npm install`, `npx prisma ...`, etc.) — give the exact command as text and wait for the user to run it and paste back the result before continuing or drawing conclusions from it. Other shell commands (git, file inspection, etc.) are fine to run directly. Exception: `npx tsc --noEmit` and `npm run lint` are run directly, without asking.
+Never run `npm` commands yourself (`npm run ...`, `npm install`, `npx prisma ...`, etc.) — give the exact command as text and wait for the user to run it and paste back the result before continuing or drawing conclusions from it. Other shell commands (git, file inspection, etc.) are fine to run directly. Exception: `npx tsc --noEmit`, `npm run lint` and `npm run deps:validate` are run directly, without asking.
 
 # Memory lifecycle
 

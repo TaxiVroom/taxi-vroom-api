@@ -1,6 +1,6 @@
 # Le compte à jour
 
-> Statut : feature close le 2026-11-11, validée par le user sur Android, non commitée. `npm run deps:validate` pas encore lancé.
+> Statut : feature close le 2026-11-11, validée par le user sur Android, commitée (7043d73). `npm run deps:validate` : aucune nouvelle violation.
 
 Concerne `taxi-vroom-api` et `taxi-vroom-mobile`. Cette spec vit dans l'API.
 
@@ -143,7 +143,7 @@ Une étape à la fois, avec une pause et ta validation entre chaque. Pour cette 
 - [x] `GET /v1/drivers/me/account` (`GetMyAccountHttpController`, `DriverAccountResponseDto`) : les trois requêtes en parallèle par le `QueryBus` ; la réponse des documents construite par `DriverDocumentsResponseDto.fromReadModel`, partagée avec `GET /v1/drivers/me/documents`
 - [x] `GET /v1/drivers/me/vehicle` retirée (son contrôleur supprimé, `FindMyVehicleQuery` gardée)
 - [x] Vérifications : `npx tsc --noEmit` sans erreur, `npm run lint` à ses 9 erreurs habituelles, aucune dans les fichiers touchés
-- [ ] `npm run deps:validate` lancé par le user
+- [x] `npm run deps:validate` (2026-11-11, à la demande du user) : seulement les 5 violations anciennes, aucune nouvelle
 
 ### Étape 2 : le compte du chauffeur (mobile)
 
