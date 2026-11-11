@@ -16,14 +16,13 @@ BookingStarter|svc|src/modules/ride/application/booking-starter.ts|each minute a
 Notification|mod|src/modules/notification|push_registrations, one phone per user, FCM adapter, token deleted when FCM says it is gone
 RideRealtime|svc|src/modules/ride/infrastructure/firebase-ride-realtime.adapter.ts|RideRealtimePort @ltm:realtime
 DriverLocator|svc|src/modules/ride/infrastructure/firebase-driver-locator.adapter.ts|geohash queries on drivers/
-AddressFinder|svc|src/modules/ride/infrastructure/geoplateforme-address-finder.adapter.ts|reverse geocoding at the estimate, 2 s timeout, None on failure
 FindMyRides|uc|src/modules/ride/queries/find-my-rides/find-my-rides.query-handler.ts|passenger's completed rides, latest first
 RegistrationModule|mod|src/modules/registration/|passenger and driver onboarding, documents @ltm:registration
 AdminModule|mod|src/modules/admin/|validates registration documents and renewed driver documents (optional corrected expiresAt), dispatching the registration's and the driver's commands; no admin role yet
 UserModule|mod|src/modules/user/|created from RegistrationCompleted; find-users; delete-user; GetMyProfileQuery (profile of the "Compte" tab, also sent by the driver module)
 DriverModule|mod|src/modules/driver/|Driver row, vehicle and documents from UserCreated; document states computed from dates (GetDriverDocumentStatesQuery, used by dispatch, bookings and go online); renewal (driver_document_submissions); go online writes onlineAllowed/<uid>; document jobs and tasks; takes blocked drivers offline after RideEnded
 EnterpriseContactModule|mod|src/modules/enterprise-contact/|one controller, GET enterprise-contact returns CONTACT_PHONE from ConfigService; no table, no query
-PassengerModule|mod|src/modules/passenger/|Passenger row from UserCreated, no route
+PassengerModule|mod|src/modules/passenger/|Passenger row from UserCreated; "Maison"/"Travail": passenger_saved_places keyed (passengerId, kind), PassengerSavedPlaceEntity (address sent by the app from Mapbox, kept as is like a ride's destinationName; never empty), add/change/delete commands, FindMySavedPlacesQuery; routes GET/POST me/saved-places, PATCH/DELETE me/saved-places/:kind
 WalletModule|mod|src/modules/wallet/|Wallet row from UserCreated; deposit/withdraw exist, no route and no caller
 
 #E from>rel>to
@@ -43,8 +42,9 @@ RideOfferTimer>dispatches ExpireRideOfferCommand>RideModule
 #B key=value
 jobQueue=Graphile Worker chosen by the user 2026-11-07 for scheduled jobs (documents reminders and expiry): tasks in Postgres, run by a worker inside the NestJS server, jobKey to replace or remove; BullMQ rejected (needs Redis, outside our Postgres transactions, volume too small to need it), pg-boss rejected (cancel by generated id); full reasons in docs/specs/documents-du-chauffeur.md, point 12; not installed yet; jobs only act (pushes, offline), they write no state: a document's state is computed from documents.expiresAt and document_types.requiredFrom (point 13)
 stack=NestJS+Prisma7+Postgres+CQRS+DDD+FirebaseAdmin(Auth,RTDB,Storage)+MapboxDirections+geo.api.gouv.fr+calendrier.api.gouv.fr
+pickupName=the API looks up no address since 2026-11-11 (Géoplateforme removed, it was down): POST rides takes originName from the app (Mapbox), "Position de départ" without it; saved places keep the address the app sends; Mapbox licence risk in docs/a-faire.md
 http=all routes under /v1; GraphQL at /graphql; Swagger at /docs
-routesRide=POST rides (estimate), rides/:id/request, accept, decline, arrive, start, complete, cancel, withdraw, no-show, rating; GET rides (passenger's completed rides), GET rides/current (passenger or driver, 404 without one), GET rides/:id/boarding-code
+routesRide=GET rides/recent-destinations (passenger, raw SQL DISTINCT ON), POST rides (estimate), rides/:id/request, accept, decline, arrive, start, complete, cancel, withdraw, no-show, rating; GET rides (passenger's completed rides), GET rides/current (passenger or driver, 404 without one), GET rides/:id/boarding-code
 routesRegistration=GET registration-flows/me (get or create), PATCH me, GET me/email-availability, POST+GET me/documents, GET me/documents/:documentTypeId/url, GET registration-document-types, POST passengers (completes the passenger)
 routesBooking=POST rides with pickupAt (estimate for later), rides/:id/book, rides/:id/booking/accept, withdraw, refuse and depart ("Je pars", DRIVER_ASSIGNED → DRIVER_EN_ROUTE with an accepted offer); GET rides/booked (passenger), bookings/available?latitude&longitude and bookings/accepted (driver, canDepart); cancel also from BOOKED and DRIVER_ASSIGNED
 bookingModel=rides.kind IMMEDIATE|SCHEDULED; ride_schedules (rideId key, pickupAt, tripMeters) from the estimate on; ride_schedule_drivers (rideId key: one driver at most, created not upserted); ride_schedule_withdrawals (by the driver or the server, both excluded from the backup search); ride_schedule_refusals; ride_schedule_alerts (GO_ONLINE only, sent once); BOOKED and DRIVER_ASSIGNED only for SCHEDULED, checked by RideEntity (no CHECK, see prefs prismaOnlySchema); a DRIVER_ASSIGNED driver is busy for immediate offers (findBusyDriverIds)

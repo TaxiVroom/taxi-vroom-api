@@ -68,11 +68,34 @@ model PushRegistration {
 }
 
 model Passenger {
-  userId String @id
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  rides  Ride[]
+  userId      String               @id
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rides       Ride[]
+  savedPlaces PassengerSavedPlace[]
 
   @@map("passengers")
+}
+
+enum SavedPlaceKind {
+  HOME
+  WORK
+}
+
+/// "Maison" and "Travail": one of each at most per passenger, no row while
+/// not set. Spec docs/specs/maison-et-travail.md.
+model PassengerSavedPlace {
+  passengerId String
+  kind        SavedPlaceKind
+  /// Chosen in the app from Mapbox, like a ride's destination, e.g. "4 Rue de
+  /// la Magel, 67000 Strasbourg, France".
+  address     String
+  latitude    Float
+  longitude   Float
+
+  passenger Passenger @relation(fields: [passengerId], references: [userId], onDelete: Cascade)
+
+  @@id([passengerId, kind])
+  @@map("passenger_saved_places")
 }
 
 model Admin {

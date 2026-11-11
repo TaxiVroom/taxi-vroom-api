@@ -17,14 +17,12 @@ import {
 import { isTariffOutdated } from '@modules/ride/domain/taxi-fare';
 import { RideRepositoryPort } from '@modules/ride/database/ride.repository.port';
 import {
-  ADDRESS_FINDER,
   DRIVER_LOCATOR,
   PUBLIC_HOLIDAYS,
   RIDE_REPOSITORY,
   ROUTE_PLANNER,
   TERRITORY,
 } from '@modules/ride/ride.di-tokens';
-import { AddressFinderPort } from '@modules/ride/application/ports/address-finder.port';
 import { DriverLocatorPort } from '@modules/ride/application/ports/driver-locator.port';
 import { PublicHolidaysPort } from '@modules/ride/application/ports/public-holidays.port';
 import { RoutePlannerPort } from '@modules/ride/application/ports/route-planner.port';
@@ -50,7 +48,6 @@ export class EstimateRideService implements ICommandHandler {
   constructor(
     @Inject(RIDE_REPOSITORY) private readonly rideRepo: RideRepositoryPort,
     @Inject(TERRITORY) private readonly territory: TerritoryPort,
-    @Inject(ADDRESS_FINDER) private readonly addressFinder: AddressFinderPort,
     @Inject(DRIVER_LOCATOR) private readonly driverLocator: DriverLocatorPort,
     @Inject(ROUTE_PLANNER) private readonly routePlanner: RoutePlannerPort,
     @Inject(PUBLIC_HOLIDAYS)
@@ -85,20 +82,16 @@ export class EstimateRideService implements ICommandHandler {
     driver: DriverCandidate,
     now: Date,
   ): Promise<RideEstimate> {
-    const { latitude, longitude } = command.origin;
-    const [route, address] = await Promise.all([
-      this.routePlanner.planTaxiRoute(
-        driver,
-        command.origin,
-        command.destination,
-      ),
-      this.addressFinder.findAddress(latitude, longitude),
-    ]);
+    const route = await this.routePlanner.planTaxiRoute(
+      driver,
+      command.origin,
+      command.destination,
+    );
     const ride = RideEntity.estimate({
       passengerId: command.passengerId,
       origin: {
         ...command.origin,
-        name: address.unwrapOr(RideEntity.unnamedPickup),
+        name: command.originName ?? RideEntity.unnamedPickup,
       },
       destination: command.destination,
       tariff,
@@ -125,16 +118,16 @@ export class EstimateRideService implements ICommandHandler {
     if (!RideEntity.isBookable(pickupAt, now)) {
       return Err(new RidePickupTimeNotBookableError());
     }
-    const { latitude, longitude } = command.origin;
-    const [trip, address] = await Promise.all([
-      this.routePlanner.planTrip(command.origin, command.destination, pickupAt),
-      this.addressFinder.findAddress(latitude, longitude),
-    ]);
+    const trip = await this.routePlanner.planTrip(
+      command.origin,
+      command.destination,
+      pickupAt,
+    );
     const estimated = RideEntity.estimateBooked({
       passengerId: command.passengerId,
       origin: {
         ...command.origin,
-        name: address.unwrapOr(RideEntity.unnamedPickup),
+        name: command.originName ?? RideEntity.unnamedPickup,
       },
       destination: command.destination,
       tariff,

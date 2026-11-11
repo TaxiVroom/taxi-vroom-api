@@ -3,7 +3,6 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { RideMapper } from './ride.mapper';
 import { RideRepository } from './database/ride.repository';
 import {
-  ADDRESS_FINDER,
   DRIVER_LOCATOR,
   PUBLIC_HOLIDAYS,
   RIDE_REALTIME,
@@ -15,7 +14,6 @@ import { FirebaseDriverLocatorAdapter } from './infrastructure/firebase-driver-l
 import { FirebaseRideRealtimeAdapter } from './infrastructure/firebase-ride-realtime.adapter';
 import { MapboxRoutePlannerAdapter } from './infrastructure/mapbox-route-planner.adapter';
 import { GeoApiTerritoryAdapter } from './infrastructure/geo-api-territory.adapter';
-import { GeoplateformeAddressFinderAdapter } from './infrastructure/geoplateforme-address-finder.adapter';
 import { CalendrierApiPublicHolidaysAdapter } from './infrastructure/calendrier-api-public-holidays.adapter';
 import { FindDriversInRideQueryHandler } from './queries/find-drivers-in-ride/find-drivers-in-ride.query-handler';
 import { RideDispatcher } from './application/ride-dispatcher';
@@ -67,6 +65,8 @@ import { FindAcceptedBookingsHttpController } from './queries/find-accepted-book
 import { FindAcceptedBookingsQueryHandler } from './queries/find-accepted-bookings/find-accepted-bookings.query-handler';
 import { FindMyRidesHttpController } from './queries/find-my-rides/find-my-rides.http.controller';
 import { FindMyRidesQueryHandler } from './queries/find-my-rides/find-my-rides.query-handler';
+import { FindMyRecentDestinationsHttpController } from './queries/find-my-recent-destinations/find-my-recent-destinations.http.controller';
+import { FindMyRecentDestinationsQueryHandler } from './queries/find-my-recent-destinations/find-my-recent-destinations.query-handler';
 import { GetBoardingCodeHttpController } from './queries/get-boarding-code/get-boarding-code.http.controller';
 import { GetBoardingCodeQueryHandler } from './queries/get-boarding-code/get-boarding-code.query-handler';
 import { GetMyEarningsHttpController } from './queries/get-my-earnings/get-my-earnings.http.controller';
@@ -89,6 +89,7 @@ const httpControllers = [
   RateRideHttpController,
   FindCurrentRideHttpController,
   FindMyRidesHttpController,
+  FindMyRecentDestinationsHttpController,
   GetBoardingCodeHttpController,
   BookRideHttpController,
   AcceptBookingHttpController,
@@ -126,6 +127,7 @@ const commandHandlers: Provider[] = [
 const queryHandlers: Provider[] = [
   FindCurrentRideQueryHandler,
   FindMyRidesQueryHandler,
+  FindMyRecentDestinationsQueryHandler,
   GetBoardingCodeQueryHandler,
   FindMyBookingsQueryHandler,
   FindAvailableBookingsQueryHandler,
@@ -155,7 +157,6 @@ const adapters: Provider[] = [
   { provide: RIDE_REALTIME, useClass: FirebaseRideRealtimeAdapter },
   { provide: ROUTE_PLANNER, useClass: MapboxRoutePlannerAdapter },
   { provide: TERRITORY, useClass: GeoApiTerritoryAdapter },
-  { provide: ADDRESS_FINDER, useClass: GeoplateformeAddressFinderAdapter },
   { provide: PUBLIC_HOLIDAYS, useClass: CalendrierApiPublicHolidaysAdapter },
 ];
 

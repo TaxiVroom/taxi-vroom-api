@@ -43,6 +43,7 @@ Téléphone : ouvre son app d'appel, le numéro déjà tapé
 |---|---|
 | Conditions d'utilisation | Ligne retirée des onglets « Compte » du chauffeur et du passager (validé par le user, 2026-11-11) |
 | Libellé (validé par le user, 2026-11-11) | « Aide » devient « Contacter le développeur », sous-titre « Intéressé par mon profil ? N'hésitez pas à m'appeler 😊 » à la place de « Questions fréquentes, nous contacter ». Écartés : « Nous contacter », d'abord retenu (« nous » contredisait « mon profil ») ; « Me contacter » (ne dit pas qui on appelle) ; « Intéressé par mon profil ? » en titre (remplace le seul contact de l'app) |
+| Écriture inclusive (validé par le user, 2026-11-12) | Le sous-titre devient « Intéressé(e) par mon profil ? N'hésitez pas à m'appeler 😊 » : la personne qui lit peut être une femme |
 | Sous-titre en entier (demandé par le user, 2026-11-11) | Le sous-titre passe à la ligne au lieu d'être coupé par « … » (vu par le user : « N'hésitez pas à m'ap… ») : option `wrapsSubtitle` de `PlaceListTile`, les adresses restent sur une ligne |
 | Passager (validé par le user, 2026-11-11) | « Contacter le développeur » aussi dans son onglet « Compte », identique : une seule ligne partagée par les deux onglets (`ContactUsRow` dans `lib/core/widgets`, comme `NotificationsRow`), un seul bloc fourni dans `app.dart` au-dessus des deux accueils, comme `NavigationBloc` |
 | Où vit le numéro (validé par le user, 2026-11-11) | Dans le `.env` de l'API (`CONTACT_PHONE`), jamais dans l'app : ni dans le dépôt mobile, ni dans l'app installée. Il change sans nouvelle version de l'app, en redémarrant l'API. Écartés : une constante de l'app (visible dans le dépôt) ; le `.env` de l'app (caché du dépôt, mais compilé dans l'app installée) |
@@ -100,7 +101,7 @@ Aucune.
 
 1. **Le numéro à appeler. Validé par le user, 2026-11-11 :** dans le `.env` de l'API, rempli par le user, servi par `GET /v1/enterprise-contact`.
 2. **Appel direct ou numéro pré-tapé.** Réglé par les plateformes : numéro pré-tapé, voir « Appel direct ».
-3. **Le texte. Validé par le user, 2026-11-11 :** « Contacter le développeur », sous-titre « Intéressé par mon profil ? N'hésitez pas à m'appeler 😊 ». Écartés : « Appeler l'assistance », puis « Nous contacter », voir « Libellé ».
+3. **Le texte. Validé par le user, 2026-11-11 :** « Contacter le développeur », sous-titre « Intéressé(e) par mon profil ? N'hésitez pas à m'appeler 😊 » (écriture inclusive, validé par le user, 2026-11-12). Écartés : « Appeler l'assistance », puis « Nous contacter », voir « Libellé ».
 4. **Le passager. Validé par le user, 2026-11-11 :** « Contacter le développeur » aussi dans son onglet « Compte ».
 5. **« Conditions d'utilisation » du passager. Validé par le user, 2026-11-11 :** retirée aussi de son onglet « Compte », comme chez le chauffeur.
 

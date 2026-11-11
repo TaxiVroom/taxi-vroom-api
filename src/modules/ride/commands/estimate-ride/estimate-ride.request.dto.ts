@@ -23,6 +23,19 @@ export class EstimateRideRequestDto {
   @IsNumber()
   readonly originLongitude: number;
 
+  @ApiProperty({
+    example: '4 Rue de la Magel, 67000 Strasbourg, France',
+    required: false,
+    description:
+      'The pickup address found by the app on Mapbox; without it, the ' +
+      'pickup is named "Position de départ".',
+  })
+  @IsOptional()
+  @MaxLength(300)
+  @MinLength(1)
+  @IsString()
+  readonly originName?: string;
+
   @ApiProperty({ example: 'Gare de Strasbourg' })
   @MaxLength(200)
   @MinLength(1)

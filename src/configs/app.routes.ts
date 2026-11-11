@@ -42,6 +42,8 @@ export const routesV1 = {
   },
   passenger: {
     root: passengersRoot,
+    savedPlaces: 'me/saved-places',
+    savedPlace: 'me/saved-places/:kind',
   },
   driver: {
     account: `${driversRoot}/me/account`,
@@ -69,6 +71,7 @@ export const routesV1 = {
     root: ridesRoot,
     current: `${ridesRoot}/current`,
     booked: `${ridesRoot}/booked`,
+    recentDestinations: `${ridesRoot}/recent-destinations`,
     request: `${ridesRoot}/:rideId/request`,
     book: `${ridesRoot}/:rideId/book`,
     acceptBooking: `${ridesRoot}/:rideId/booking/accept`,

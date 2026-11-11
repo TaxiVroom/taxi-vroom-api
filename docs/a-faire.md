@@ -10,9 +10,11 @@ Noté le 2026-11-05, décision du user : après le lancement. Le chauffeur verra
 
 Noté le 2026-11-05, décision du user : à faire à la toute fin, après le déploiement de l'app. Ces features ont été codées avant la mémoire IA et n'ont pas de spec dans `docs/specs/` : estimation du prix, commande immédiate et recherche du chauffeur, déroulé de la course (approche, arrivée, code de montée, absence, encaissement), annulation et désistement, présence du chauffeur, inscription et documents. Chacune au format habituel, déduite du code (qui fait foi) et de `ltm/`, en documents seulement ; les incohérences trouvées vont dans « À valider ». Exception décidée par le user le 2026-11-07 : l'inscription du chauffeur est écrite maintenant (`docs/specs/inscription-chauffeur.md`), parce que la copie des documents s'y ajoute.
 
-## Le nom de la destination gardé en base vient de Mapbox
+## Les adresses gardées en base viennent de Mapbox
 
-Noté le 2026-11-05, en écrivant `docs/specs/point-de-prise-en-charge.md`. La doc de Mapbox Search Box réserve ses résultats à un « temporary use » ; or `destinationName`, choisi dans ses suggestions, est gardé dans `rides`. À régler : le nommer avec la Géoplateforme, comme le départ, ou voir avec Mapbox.
+Noté le 2026-11-05, en écrivant `docs/specs/point-de-prise-en-charge.md`. La doc de Mapbox Search Box réserve ses résultats à un « temporary use » ; or `destinationName`, choisi dans ses suggestions, est gardé dans `rides`.
+
+Élargi le 2026-11-11 : la Géoplateforme, en panne toute la journée, a été retirée à la demande du user. Viennent désormais aussi de Mapbox le nom du départ (`rides.originName`) et l'adresse de « Maison » et « Travail » (`passenger_saved_places.address`). À régler avant la mise en service : un contrat avec Mapbox pour garder ces données, ou revenir à une source sous licence ouverte avec un secours quand elle ne répond pas.
 
 ## Le passager se déplace pendant que le chauffeur vient le chercher
 

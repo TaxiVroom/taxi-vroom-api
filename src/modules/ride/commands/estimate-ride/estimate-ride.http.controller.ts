@@ -61,6 +61,7 @@ export class EstimateRideHttpController {
             latitude: body.originLatitude,
             longitude: body.originLongitude,
           },
+          originName: body.originName,
           destination: {
             name: body.destinationName,
             latitude: body.destinationLatitude,
