@@ -37,6 +37,7 @@ export type RideModel = {
   destinationLongitude: number;
   estimatedPriceMinCents: number;
   estimatedPriceMaxCents: number;
+  passengerCount: number;
   tariffId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -117,6 +118,7 @@ export class RideMapper
       destinationLongitude: props.destination.longitude,
       estimatedPriceMinCents: props.estimatedPrice.minCents,
       estimatedPriceMaxCents: props.estimatedPrice.maxCents,
+      passengerCount: props.passengerCount,
       tariffId: props.tariffId,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
@@ -166,6 +168,7 @@ export class RideMapper
           minCents: record.estimatedPriceMinCents,
           maxCents: record.estimatedPriceMaxCents,
         },
+        passengerCount: record.passengerCount,
         tariffId: record.tariffId,
         step: this.stepToDomain(record),
         offers: [...record.offers]

@@ -8,6 +8,22 @@ import {
 // The meter moves by drops of 0,10 €.
 const dropCents = 10;
 
+// The first four passengers cost nothing more: the supplement counts the
+// passengers from the fifth. Spec docs/specs/nombre-de-passagers.md.
+const passengersWithoutSupplement = 4;
+
+// How many passengers pay the supplement, e.g. 2 for 6 passengers.
+export function supplementPassengerCount(passengerCount: number): number {
+  return Math.max(0, passengerCount - passengersWithoutSupplement);
+}
+
+function passengerSupplementCents(
+  tariff: TaxiTariff,
+  passengerCount: number,
+): number {
+  return tariff.extraPassengerCents * supplementPassengerCount(passengerCount);
+}
+
 // The arrêtés come out every year in January-February: older tariffs were
 // most likely replaced.
 const tariffLifetimeMs = 365 * 24 * 60 * 60_000;
@@ -35,13 +51,14 @@ type FareContext = { tariff: TaxiTariff; publicHolidays: Set<string> };
 // whichever is higher, at the tariff of the hour the taxi drives it. The
 // approach from the taxi is charged at A/B (Bas-Rhin arrêté, art. 8). The
 // trip goes from a taxi returning with a passenger (A/B) to one returning
-// empty (C/D). Supplements are left out: the passenger does not
-// tell their luggage yet.
+// empty (C/D). The supplement for each passenger from the fifth is added after
+// the minimum fare.
 export function estimateFare(
   tariff: TaxiTariff,
   route: TaxiRoute,
   departsAt: Date,
   publicHolidays: Set<string>,
+  passengerCount: number,
 ): EstimatedPrice {
   const context = { tariff, publicHolidays };
   const { a, b, c, d } = tariff.kmCents;
@@ -50,7 +67,10 @@ export function estimateFare(
   const fare = (rates: KmRates): number => {
     const trip = runMeter(context, route.trip, rates, approach.endsAt);
     const cents = tariff.pickupCents + approach.cents + trip.cents;
-    return Math.max(cents, tariff.minimumFareCents);
+    return (
+      Math.max(cents, tariff.minimumFareCents) +
+      passengerSupplementCents(tariff, passengerCount)
+    );
   };
   return toRange(fare(loaded), fare({ day: c, night: d }));
 }
@@ -67,6 +87,7 @@ export function estimateBookedFare(
   trip: RouteSegment[],
   pickupAt: Date,
   publicHolidays: Set<string>,
+  passengerCount: number,
 ): EstimatedPrice {
   const context = { tariff, publicHolidays };
   const { a, b, c, d } = tariff.kmCents;
@@ -77,7 +98,10 @@ export function estimateBookedFare(
       tariff.pickupCents +
       approachCents +
       runMeter(context, trip, rates, pickupAt).cents;
-    return Math.max(cents, tariff.minimumFareCents);
+    return (
+      Math.max(cents, tariff.minimumFareCents) +
+      passengerSupplementCents(tariff, passengerCount)
+    );
   };
   return toRange(fare(loaded, 0), fare({ day: c, night: d }, approach.cents));
 }

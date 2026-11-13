@@ -23,7 +23,9 @@ import {
   RideBookingTakenError,
   RideDriverBusyError,
   RideEstimateExpiredError,
+  RideInvalidPassengerSupplementError,
   RideNotAssignedToDriverError,
+  RideNotEnoughSeatsError,
   RideNotOwnedByPassengerError,
   RideNotSearchingDriverError,
   RideOfferAlreadyPendingError,
@@ -54,7 +56,11 @@ import {
   ScheduleAlert,
   ScheduleAlertKind,
 } from './ride.types';
-import { estimateBookedFare, estimateFare } from './taxi-fare';
+import {
+  estimateBookedFare,
+  estimateFare,
+  supplementPassengerCount,
+} from './taxi-fare';
 
 export class RideEntity extends AggregateRoot<RideProps> {
   protected readonly _id: AggregateID;
@@ -99,6 +105,9 @@ export class RideEntity extends AggregateRoot<RideProps> {
   // A driver cannot be on time for two pickups closer than this.
   static readonly bookingsMinimumGapMinutes = 60;
 
+  // The id of the "5e passager et plus" line of the end of ride.
+  static readonly fifthPassengerSupplementId = 'fifth-passenger';
+
   // The price shown before ordering, computed from the closest free taxi:
   // nobody is told about the ride yet.
   static estimate(props: EstimateRideProps): RideEntity {
@@ -111,7 +120,14 @@ export class RideEntity extends AggregateRoot<RideProps> {
         timing: { kind: RideKind.immediate },
         origin: props.origin,
         destination: props.destination,
-        estimatedPrice: estimateFare(tariff, route, now, publicHolidays),
+        estimatedPrice: estimateFare(
+          tariff,
+          route,
+          now,
+          publicHolidays,
+          props.passengerCount,
+        ),
+        passengerCount: props.passengerCount,
         tariffId: tariff.id,
         step: { status: RideStatus.estimated },
         offers: [],
@@ -152,7 +168,9 @@ export class RideEntity extends AggregateRoot<RideProps> {
             trip,
             pickupAt,
             publicHolidays,
+            props.passengerCount,
           ),
+          passengerCount: props.passengerCount,
           tariffId: tariff.id,
           step: { status: RideStatus.estimated },
           offers: [],
@@ -167,12 +185,18 @@ export class RideEntity extends AggregateRoot<RideProps> {
     return !isBefore(pickupAt, earliest) && isBefore(pickupAt, latest);
   }
 
-  // The taxi that would come, whose approach is part of the price.
+  // The taxi that would come, whose approach is part of the price: free, and
+  // with a seat for each passenger.
   static approachingDriver(
     pickup: RidePosition,
+    passengerCount: number,
     candidates: DriverCandidate[],
   ): Result<DriverCandidate, NoDriverAvailableError> {
-    const driver = RideEntity.closestFreeDriver(pickup, candidates);
+    const driver = RideEntity.closestFreeDriver(
+      pickup,
+      passengerCount,
+      candidates,
+    );
     return driver ? Ok(driver) : Err(new NoDriverAvailableError());
   }
 
@@ -320,14 +344,18 @@ export class RideEntity extends AggregateRoot<RideProps> {
   // tell whether they can be on time for this one.
   // A driver whose documents end before the pickup cannot take it: null
   // means no end. Spec docs/specs/documents-du-chauffeur.md.
+  // A taxi with fewer seats than passengers cannot take it. Spec
+  // docs/specs/nombre-de-passagers.md.
   acceptBooking(
     driverId: string,
+    driverSeats: number,
     otherPickupTimes: Date[],
     driverInOrderUntil: Date | null,
     now: Date,
   ): Result<
     void,
     | RideWrongStepError
+    | RideNotEnoughSeatsError
     | RideBookingTakenError
     | RideBookingOverlapError
     | RideDriverDocumentsEndBeforeError
@@ -335,6 +363,9 @@ export class RideEntity extends AggregateRoot<RideProps> {
     const schedule = this.schedule;
     if (this.status !== RideStatus.booked || !schedule) {
       return Err(new RideWrongStepError());
+    }
+    if (driverSeats < this.props.passengerCount) {
+      return Err(new RideNotEnoughSeatsError());
     }
     if (driverInOrderUntil && !isAfter(driverInOrderUntil, schedule.pickupAt)) {
       return Err(new RideDriverDocumentsEndBeforeError());
@@ -605,18 +636,28 @@ export class RideEntity extends AggregateRoot<RideProps> {
   }
 
   // "Valider et repasser libre": the passenger is at their destination.
+  // extraPassengerCents is the supplement of the ride's tariff.
   complete(
     driverId: string,
     meterCents: number,
     supplements: RideSupplement[],
+    extraPassengerCents: number,
     now: Date,
-  ): Result<void, RideNotAssignedToDriverError | RideWrongStepError> {
+  ): Result<
+    void,
+    | RideNotAssignedToDriverError
+    | RideWrongStepError
+    | RideInvalidPassengerSupplementError
+  > {
     if (this.driverId !== driverId) {
       return Err(new RideNotAssignedToDriverError());
     }
     const step = this.props.step;
     if (step.status !== RideStatus.inProgress) {
       return Err(new RideWrongStepError());
+    }
+    if (!this.hasValidPassengerSupplement(supplements, extraPassengerCents)) {
+      return Err(new RideInvalidPassengerSupplementError());
     }
     this.props.step = {
       ...step,
@@ -794,6 +835,10 @@ export class RideEntity extends AggregateRoot<RideProps> {
     if (pending.length > 1) {
       throw new ArgumentInvalidException('Ride: one pending offer at most');
     }
+    // A taxi has eight seats at most (code des transports, L3121-1).
+    if (this.props.passengerCount < 1 || this.props.passengerCount > 8) {
+      throw new ArgumentInvalidException('Ride: from 1 to 8 passengers');
+    }
     const beforeOrder = [
       RideStatus.estimated,
       RideStatus.booked,
@@ -841,7 +886,29 @@ export class RideEntity extends AggregateRoot<RideProps> {
       ...(schedule?.withdrawals.map((w) => w.driverId) ?? []),
     ]);
     const notAsked = candidates.filter((c) => !excluded.has(c.driverId));
-    return RideEntity.closestFreeDriver(this.props.origin, notAsked)?.driverId;
+    return RideEntity.closestFreeDriver(
+      this.props.origin,
+      this.props.passengerCount,
+      notAsked,
+    )?.driverId;
+  }
+
+  // The "5e passager et plus" line is priced by the ride's tariff and never
+  // counts more passengers than the ride has from the fifth. A ride without
+  // the line is valid: the supplement is optional for the driver.
+  private hasValidPassengerSupplement(
+    supplements: RideSupplement[],
+    extraPassengerCents: number,
+  ): boolean {
+    const line = supplements.find(
+      (supplement) =>
+        supplement.supplementId === RideEntity.fifthPassengerSupplementId,
+    );
+    if (!line) return true;
+    return (
+      line.unitPriceCents === extraPassengerCents &&
+      line.quantity <= supplementPassengerCount(this.props.passengerCount)
+    );
   }
 
   // The committed driver loses the booking before leaving, as if they had
@@ -893,10 +960,11 @@ export class RideEntity extends AggregateRoot<RideProps> {
 
   private static closestFreeDriver(
     pickup: RidePosition,
+    passengerCount: number,
     candidates: DriverCandidate[],
   ): DriverCandidate | undefined {
     return candidates
-      .filter((c) => !c.isBusy)
+      .filter((c) => !c.isBusy && c.passengerSeats >= passengerCount)
       .map((c) => ({ candidate: c, meters: RideEntity.metersTo(pickup, c) }))
       .filter((c) => c.meters <= RideEntity.reachableRadiusMeters)
       .sort((a, b) => a.meters - b.meters)[0]?.candidate;

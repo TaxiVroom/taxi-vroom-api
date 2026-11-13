@@ -24,6 +24,7 @@ export interface RegistrationVehicleModel {
   adsNumber: string;
   communeCode: string;
   communeName: string;
+  passengerSeats: number;
 }
 
 export type RegistrationModel = {
@@ -269,6 +270,7 @@ export class RegistrationRepository
         adsNumber: vehicle.adsNumber,
         communeCode: vehicle.communeCode,
         communeName: vehicle.communeName,
+        passengerSeats: vehicle.passengerSeats,
       },
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,

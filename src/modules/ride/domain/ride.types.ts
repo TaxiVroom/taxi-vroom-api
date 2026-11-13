@@ -25,8 +25,8 @@ export interface BoardingCode {
   failedAttempts: number;
 }
 
-// A supplement added by the driver at the end of the ride, e.g. 2 bulky
-// luggages.
+// A supplement added by the driver at the end of the ride, e.g. 2 passengers
+// beyond the fourth.
 export interface RideSupplement {
   supplementId: string;
   label: string;
@@ -45,7 +45,6 @@ export interface RideCompletion {
 export enum RideCompliment {
   smoothDriving = 'SMOOTH_DRIVING',
   punctual = 'PUNCTUAL',
-  luggageHelp = 'LUGGAGE_HELP',
 }
 
 // The passenger's rating of the driver, given once after the ride.
@@ -178,6 +177,8 @@ export interface TaxiTariff {
   nightStartMinute: number;
   nightEndMinute: number;
   holidayZone: HolidayZone;
+  // The supplement for each passenger from the fifth.
+  extraPassengerCents: number;
 }
 
 // A stretch of road between two points of the route, timed with the traffic.
@@ -268,6 +269,9 @@ export interface RideProps {
   origin: RidePickup;
   destination: RidePlace;
   estimatedPrice: EstimatedPrice;
+  // How many people travel, from 1 to 8: only a taxi with as many seats can
+  // take the ride.
+  passengerCount: number;
   // The tariffs the estimate was computed with, as proof.
   tariffId: string;
   step: RideStep;
@@ -277,6 +281,7 @@ export interface RideProps {
 
 export interface EstimateRideProps {
   passengerId: string;
+  passengerCount: number;
   origin: RidePickup;
   destination: RidePlace;
   tariff: TaxiTariff;
@@ -288,6 +293,7 @@ export interface EstimateRideProps {
 
 export interface EstimateBookedRideProps {
   passengerId: string;
+  passengerCount: number;
   origin: RidePickup;
   destination: RidePlace;
   tariff: TaxiTariff;
@@ -305,4 +311,6 @@ export interface DriverCandidate {
   longitude: number;
   // Already proposed another ride, or driving one.
   isBusy: boolean;
+  // The passenger seats of their taxi, 0 when unknown (no vehicle).
+  passengerSeats: number;
 }

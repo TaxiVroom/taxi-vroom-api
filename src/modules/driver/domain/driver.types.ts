@@ -8,6 +8,8 @@ export interface DriverVehicle {
   adsNumber: string;
   communeCode: string;
   communeName: string;
+  // From 1 to 8. Spec docs/specs/nombre-de-passagers.md.
+  passengerSeats: number;
 }
 
 // A document of the driver, validated at the registration. The files stay

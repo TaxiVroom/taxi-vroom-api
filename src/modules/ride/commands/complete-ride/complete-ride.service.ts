@@ -3,6 +3,7 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Err, Ok, Result } from 'oxide.ts';
 import { RideEntity } from '@modules/ride/domain/ride.entity';
 import {
+  RideInvalidPassengerSupplementError,
   RideNotAssignedToDriverError,
   RideNotFoundError,
   RideWrongStepError,
@@ -16,7 +17,8 @@ import { CompleteRideCommand } from './complete-ride.command';
 export type CompleteRideError =
   | RideNotFoundError
   | RideNotAssignedToDriverError
-  | RideWrongStepError;
+  | RideWrongStepError
+  | RideInvalidPassengerSupplementError;
 
 @CommandHandler(CompleteRideCommand)
 export class CompleteRideService implements ICommandHandler {
@@ -51,6 +53,7 @@ export class CompleteRideService implements ICommandHandler {
       command.driverId,
       command.meterCents,
       command.supplements,
+      await this.rideRepo.findExtraPassengerCents(ride.id),
       new Date(),
     );
     if (completed.isErr()) return Err(completed.unwrapErr());

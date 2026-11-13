@@ -20,6 +20,7 @@ export interface RideOfferNotice {
   destination: RidePlace;
   estimatedPrice: EstimatedPrice;
   passengerFirstName: string;
+  passengerCount: number;
   kind: RideKind;
   // Only for a booking: when the passenger is waiting for the taxi.
   pickupAt?: Date;

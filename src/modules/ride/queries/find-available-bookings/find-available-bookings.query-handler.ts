@@ -9,6 +9,10 @@ import {
   DriverDocumentStatesReadModel,
   GetDriverDocumentStatesQuery,
 } from '@modules/driver/queries/get-driver-document-states/get-driver-document-states.query-handler';
+import {
+  DriverSeatsReadModel,
+  GetDriverSeatsQuery,
+} from '@modules/driver/queries/get-driver-seats/get-driver-seats.query-handler';
 
 export class FindAvailableBookingsQuery extends QueryBase {
   readonly driverId: string;
@@ -34,6 +38,7 @@ export interface DriverBooking {
   estimatedPriceMinCents: number;
   estimatedPriceMaxCents: number;
   passengerFirstName: string;
+  passengerCount: number;
   // Its deadline passed and it is theirs: "Je pars" replaces "Se désister".
   canDepart: boolean;
 }
@@ -48,6 +53,7 @@ export const driverBookingFields = {
   destinationName: true,
   estimatedPriceMinCents: true,
   estimatedPriceMaxCents: true,
+  passengerCount: true,
   passenger: { select: { user: { select: { firstName: true } } } },
   schedule: { select: { pickupAt: true, tripMeters: true } },
 };
@@ -61,6 +67,7 @@ export interface DriverBookingRow {
   destinationName: string;
   estimatedPriceMinCents: number;
   estimatedPriceMaxCents: number;
+  passengerCount: number;
   passenger: { user: { firstName: string } };
   schedule: { pickupAt: Date; tripMeters: number } | null;
 }
@@ -79,6 +86,7 @@ export function toDriverBookings(rows: DriverBookingRow[]): DriverBooking[] {
             estimatedPriceMinCents: ride.estimatedPriceMinCents,
             estimatedPriceMaxCents: ride.estimatedPriceMaxCents,
             passengerFirstName: passenger.user.firstName,
+            passengerCount: ride.passengerCount,
             canDepart: ride.status === RideStatus.DRIVER_ASSIGNED,
           },
         ]
@@ -91,7 +99,9 @@ const metersPerLatitudeDegree = 111_320;
 // The bookings no driver committed to and this driver did not refuse, whose
 // pickup is within reach of the driver and that do not start within the next
 // 30 min, nor after the end of one of their documents (the app tells why,
-// from GET drivers/me/documents). The soonest first.
+// from GET drivers/me/documents), and that have no more passengers than the
+// seats of their taxi: this query filters them itself, it never calls the
+// domain. The soonest first.
 @QueryHandler(FindAvailableBookingsQuery)
 export class FindAvailableBookingsQueryHandler implements IQueryHandler {
   constructor(
@@ -105,10 +115,15 @@ export class FindAvailableBookingsQueryHandler implements IQueryHandler {
     // A box around the driver for the database, then the exact distance.
     const latitudeDelta = radius / metersPerLatitudeDegree;
     const longitudeDelta = latitudeDelta / Math.cos((latitude * Math.PI) / 180);
+    // No vehicle: no known seats, so no booking fits.
+    const [seats]: DriverSeatsReadModel[] = await this.queryBus.execute(
+      new GetDriverSeatsQuery({ driverIds: [query.driverId] }),
+    );
     const rows: DriverBookingRow[] = await this.prisma.ride.findMany({
       where: {
         kind: RideKind.SCHEDULED,
         status: RideStatus.BOOKED,
+        passengerCount: { lte: seats?.passengerSeats ?? 0 },
         originLatitude: {
           gte: latitude - latitudeDelta,
           lte: latitude + latitudeDelta,

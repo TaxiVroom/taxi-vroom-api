@@ -69,6 +69,8 @@ import { FindMyRecentDestinationsHttpController } from './queries/find-my-recent
 import { FindMyRecentDestinationsQueryHandler } from './queries/find-my-recent-destinations/find-my-recent-destinations.query-handler';
 import { GetBoardingCodeHttpController } from './queries/get-boarding-code/get-boarding-code.http.controller';
 import { GetBoardingCodeQueryHandler } from './queries/get-boarding-code/get-boarding-code.query-handler';
+import { GetRideCheckoutHttpController } from './queries/get-ride-checkout/get-ride-checkout.http.controller';
+import { GetRideCheckoutQueryHandler } from './queries/get-ride-checkout/get-ride-checkout.query-handler';
 import { GetMyEarningsHttpController } from './queries/get-my-earnings/get-my-earnings.http.controller';
 import { GetMyEarningsQueryHandler } from './queries/get-my-earnings/get-my-earnings.query-handler';
 import { GetMyActivityHttpController } from './queries/get-my-activity/get-my-activity.http.controller';
@@ -91,6 +93,7 @@ const httpControllers = [
   FindMyRidesHttpController,
   FindMyRecentDestinationsHttpController,
   GetBoardingCodeHttpController,
+  GetRideCheckoutHttpController,
   BookRideHttpController,
   AcceptBookingHttpController,
   WithdrawFromBookingHttpController,
@@ -129,6 +132,7 @@ const queryHandlers: Provider[] = [
   FindMyRidesQueryHandler,
   FindMyRecentDestinationsQueryHandler,
   GetBoardingCodeQueryHandler,
+  GetRideCheckoutQueryHandler,
   FindMyBookingsQueryHandler,
   FindAvailableBookingsQueryHandler,
   FindAcceptedBookingsQueryHandler,

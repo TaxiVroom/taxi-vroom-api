@@ -215,3 +215,28 @@ export class RideDriverBusyError extends ExceptionBase {
     super(RideDriverBusyError.message, cause, metadata);
   }
 }
+
+// A booking offered to a taxi with fewer seats than passengers: the driver's
+// app never shows it, this guards a call made outside the app.
+export class RideNotEnoughSeatsError extends ExceptionBase {
+  static readonly message = 'This taxi has fewer seats than passengers';
+
+  readonly code = 'RIDE.NOT_ENOUGH_SEATS';
+
+  constructor(cause?: Error, metadata?: unknown) {
+    super(RideNotEnoughSeatsError.message, cause, metadata);
+  }
+}
+
+// The "5e passager et plus" line of the end of ride does not match the ride:
+// the app computes it from the API, this guards a call made outside the app.
+export class RideInvalidPassengerSupplementError extends ExceptionBase {
+  static readonly message =
+    'The passenger supplement does not match the ride passengers or tariff';
+
+  readonly code = 'RIDE.INVALID_PASSENGER_SUPPLEMENT';
+
+  constructor(cause?: Error, metadata?: unknown) {
+    super(RideInvalidPassengerSupplementError.message, cause, metadata);
+  }
+}

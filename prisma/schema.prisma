@@ -328,6 +328,8 @@ model DriverRegistrationVehicle {
   /// The commune de rattachement: its INSEE code and its name.
   communeCode String
   communeName String
+  /// The passenger seats, from 1 to 8 (a taxi has eight seats at most).
+  passengerSeats Int
 
   driverRegistration DriverRegistration @relation(fields: [driverRegId], references: [userId], onDelete: Cascade)
 
@@ -344,6 +346,9 @@ model DriverVehicle {
   adsNumber   String
   communeCode String
   communeName String
+  /// The passenger seats, from 1 to 8. A ride is only offered to a taxi with
+  /// at least as many seats as passengers.
+  passengerSeats Int
   createdAt   DateTime     @default(now())
 
   driver Driver @relation(fields: [driverId], references: [userId], onDelete: Cascade)
@@ -399,6 +404,10 @@ model TaxiTariff {
   nightStartMinute Int
   nightEndMinute   Int
   holidayZone      HolidayZone
+  /// The supplement for each passenger from the fifth: "4 € per passenger
+  /// from the fifth" in the Bas-Rhin, 5,50 € in Paris. Spec
+  /// docs/specs/nombre-de-passagers.md.
+  extraPassengerCents Int
 
   rides Ride[]
 
@@ -455,6 +464,9 @@ model Ride {
   /// meter, the real price is only known on arrival.
   estimatedPriceMinCents Int
   estimatedPriceMaxCents Int
+  /// How many people travel, from 1 to 8 (a taxi has eight seats at most).
+  /// The estimate counts the supplement from the fifth.
+  passengerCount         Int
   /// The tariffs the estimate was computed with, as proof.
   tariffId               String
   /// When the estimate was made.
@@ -635,7 +647,6 @@ model RideCompletion {
 enum RideCompliment {
   SMOOTH_DRIVING
   PUNCTUAL
-  LUGGAGE_HELP
 }
 
 /// The passenger's rating of the driver, once: a ride without one has no row.
@@ -653,8 +664,8 @@ model RideRating {
   @@map("ride_ratings")
 }
 
-/// A supplement the driver added at the end of the ride, e.g. 2 bulky
-/// luggages.
+/// A supplement the driver added at the end of the ride, e.g. 2 passengers
+/// beyond the fourth.
 model RideCompletionSupplement {
   offerId        String
   supplementId   String

@@ -40,7 +40,8 @@ export class EstimateRideHttpController {
     status: HttpStatus.UNPROCESSABLE_ENTITY,
     description:
       'RIDE.AREA_NOT_SERVED: no tariffs for the département yet; ' +
-      'RIDE.NO_DRIVER_AVAILABLE: no free taxi within reach, for a ride now',
+      'RIDE.NO_DRIVER_AVAILABLE: no free taxi with enough seats within ' +
+      'reach, for a ride now',
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
@@ -57,6 +58,7 @@ export class EstimateRideHttpController {
       await this.commandBus.execute(
         new EstimateRideCommand({
           passengerId: user.id,
+          passengerCount: body.passengerCount,
           origin: {
             latitude: body.originLatitude,
             longitude: body.originLongitude,

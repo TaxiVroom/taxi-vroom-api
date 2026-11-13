@@ -341,7 +341,17 @@ export class RideRepository
       nightStartMinute: row.nightStartMinute,
       nightEndMinute: row.nightEndMinute,
       holidayZone: row.holidayZone as HolidayZone,
+      extraPassengerCents: row.extraPassengerCents,
     });
+  }
+
+  // The tariff the ride was estimated with, kept as proof by rides.tariffId.
+  async findExtraPassengerCents(rideId: string): Promise<number> {
+    const ride = await this.model.findUniqueOrThrow({
+      where: { id: rideId },
+      select: { tariff: { select: { extraPassengerCents: true } } },
+    });
+    return ride.tariff.extraPassengerCents;
   }
 
   // The committed driver is written once, or removed; a withdrawal is written

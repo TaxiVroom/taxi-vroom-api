@@ -8,6 +8,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
@@ -19,6 +20,7 @@ import { RegisteredUser } from '@modules/auth/domain/authenticated-user';
 import { Roles } from '@modules/auth/roles.decorator';
 import { UserRoles } from '@modules/user/domain/user.types';
 import {
+  RideInvalidPassengerSupplementError,
   RideNotAssignedToDriverError,
   RideNotFoundError,
   RideWrongStepError,
@@ -36,6 +38,11 @@ export class CompleteRideHttpController {
   @ApiResponse({ status: HttpStatus.NOT_FOUND, type: ApiErrorResponse })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, type: ApiErrorResponse })
   @ApiResponse({ status: HttpStatus.CONFLICT, type: ApiErrorResponse })
+  @ApiResponse({
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    description: 'RIDE.INVALID_PASSENGER_SUPPLEMENT',
+    type: ApiErrorResponse,
+  })
   @Roles(UserRoles.driver)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post(routesV1.ride.complete)
@@ -71,6 +78,12 @@ export class CompleteRideHttpController {
         }
         if (error instanceof RideWrongStepError) {
           throw new ConflictException(error.message);
+        }
+        if (error instanceof RideInvalidPassengerSupplementError) {
+          throw new UnprocessableEntityException({
+            message: error.message,
+            code: error.code,
+          });
         }
         throw error;
       },

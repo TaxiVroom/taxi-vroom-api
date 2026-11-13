@@ -13,6 +13,7 @@ export interface RegistrationVehicleReadModel {
   adsNumber: string;
   communeCode: string;
   communeName: string;
+  passengerSeats: number;
 }
 
 export class FindRegistrationVehicleQuery extends QueryBase {
@@ -42,6 +43,7 @@ export class FindRegistrationVehicleQueryHandler implements IQueryHandler {
       adsNumber: vehicle.adsNumber,
       communeCode: vehicle.communeCode,
       communeName: vehicle.communeName,
+      passengerSeats: vehicle.passengerSeats,
     });
   }
 }

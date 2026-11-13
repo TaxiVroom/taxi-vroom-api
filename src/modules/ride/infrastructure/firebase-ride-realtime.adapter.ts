@@ -24,6 +24,7 @@ export class FirebaseRideRealtimeAdapter implements RideRealtimePort {
         estimatedPriceMinCents: offer.estimatedPrice.minCents,
         estimatedPriceMaxCents: offer.estimatedPrice.maxCents,
         passengerFirstName: offer.passengerFirstName,
+        passengerCount: offer.passengerCount,
         kind: offer.kind,
         // Absent for a ride now: the database keeps no null.
         ...(offer.pickupAt && { pickupAt: offer.pickupAt.getTime() }),

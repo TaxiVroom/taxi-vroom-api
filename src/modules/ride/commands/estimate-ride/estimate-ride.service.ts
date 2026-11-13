@@ -1,6 +1,6 @@
 import { Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler, QueryBus } from '@nestjs/cqrs';
 import { EnvConfig } from '@config/env.validation';
 import { Err, None, Ok, Option, Result } from 'oxide.ts';
 import { RideEntity } from '@modules/ride/domain/ride.entity';
@@ -27,6 +27,10 @@ import { DriverLocatorPort } from '@modules/ride/application/ports/driver-locato
 import { PublicHolidaysPort } from '@modules/ride/application/ports/public-holidays.port';
 import { RoutePlannerPort } from '@modules/ride/application/ports/route-planner.port';
 import { TerritoryPort } from '@modules/ride/application/ports/territory.port';
+import {
+  DriverSeatsReadModel,
+  GetDriverSeatsQuery,
+} from '@modules/driver/queries/get-driver-seats/get-driver-seats.query-handler';
 import { EstimateRideCommand } from './estimate-ride.command';
 
 export type EstimateRideError =
@@ -53,6 +57,7 @@ export class EstimateRideService implements ICommandHandler {
     @Inject(PUBLIC_HOLIDAYS)
     private readonly publicHolidays: PublicHolidaysPort,
     private readonly configService: ConfigService<EnvConfig, true>,
+    private readonly queryBus: QueryBus,
   ) {}
 
   async execute(
@@ -68,7 +73,11 @@ export class EstimateRideService implements ICommandHandler {
     }
 
     const candidates = await this.findCandidates(command.origin);
-    const driver = RideEntity.approachingDriver(command.origin, candidates);
+    const driver = RideEntity.approachingDriver(
+      command.origin,
+      command.passengerCount,
+      candidates,
+    );
     if (driver.isErr()) return Err(driver.unwrapErr());
 
     return Ok(
@@ -89,6 +98,7 @@ export class EstimateRideService implements ICommandHandler {
     );
     const ride = RideEntity.estimate({
       passengerId: command.passengerId,
+      passengerCount: command.passengerCount,
       origin: {
         ...command.origin,
         name: command.originName ?? RideEntity.unnamedPickup,
@@ -125,6 +135,7 @@ export class EstimateRideService implements ICommandHandler {
     );
     const estimated = RideEntity.estimateBooked({
       passengerId: command.passengerId,
+      passengerCount: command.passengerCount,
       origin: {
         ...command.origin,
         name: command.originName ?? RideEntity.unnamedPickup,
@@ -171,12 +182,19 @@ export class EstimateRideService implements ICommandHandler {
       pickup.longitude,
       RideEntity.reachableRadiusMeters,
     );
-    const busy = await this.rideRepo.findBusyDriverIds(
-      onlineDrivers.map((driver) => driver.driverId),
+    const driverIds = onlineDrivers.map((driver) => driver.driverId);
+    const busy = await this.rideRepo.findBusyDriverIds(driverIds);
+    // One read for all the drivers; none known for a driver without vehicle.
+    const seats: DriverSeatsReadModel[] = await this.queryBus.execute(
+      new GetDriverSeatsQuery({ driverIds }),
+    );
+    const seatsOf = new Map(
+      seats.map((entry) => [entry.driverId, entry.passengerSeats]),
     );
     return onlineDrivers.map((driver) => ({
       ...driver,
       isBusy: busy.has(driver.driverId),
+      passengerSeats: seatsOf.get(driver.driverId) ?? 0,
     }));
   }
 

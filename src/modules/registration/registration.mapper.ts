@@ -90,6 +90,7 @@ export class RegistrationMapper
     response.adsNumber = vehicle.adsNumber;
     response.communeCode = vehicle.communeCode;
     response.communeName = vehicle.communeName;
+    response.passengerSeats = vehicle.passengerSeats;
     return response;
   }
 

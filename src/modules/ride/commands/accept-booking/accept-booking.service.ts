@@ -7,6 +7,7 @@ import {
   RideBookingOverlapError,
   RideBookingTakenError,
   RideDriverDocumentsEndBeforeError,
+  RideNotEnoughSeatsError,
   RideNotFoundError,
   RideWrongStepError,
 } from '@modules/ride/domain/ride.errors';
@@ -17,11 +18,16 @@ import {
   DriverDocumentStatesReadModel,
   GetDriverDocumentStatesQuery,
 } from '@modules/driver/queries/get-driver-document-states/get-driver-document-states.query-handler';
+import {
+  DriverSeatsReadModel,
+  GetDriverSeatsQuery,
+} from '@modules/driver/queries/get-driver-seats/get-driver-seats.query-handler';
 import { AcceptBookingCommand } from './accept-booking.command';
 
 export type AcceptBookingError =
   | RideNotFoundError
   | RideWrongStepError
+  | RideNotEnoughSeatsError
   | RideBookingTakenError
   | RideBookingOverlapError
   | RideDriverDocumentsEndBeforeError;
@@ -68,8 +74,13 @@ export class AcceptBookingService implements ICommandHandler {
       await this.queryBus.execute(
         new GetDriverDocumentStatesQuery({ driverIds: [command.driverId] }),
       );
+    // No vehicle: no known seats.
+    const [seats]: DriverSeatsReadModel[] = await this.queryBus.execute(
+      new GetDriverSeatsQuery({ driverIds: [command.driverId] }),
+    );
     const accepted = ride.acceptBooking(
       command.driverId,
+      seats?.passengerSeats ?? 0,
       otherPickupTimes,
       documents.inOrderUntil,
       new Date(),

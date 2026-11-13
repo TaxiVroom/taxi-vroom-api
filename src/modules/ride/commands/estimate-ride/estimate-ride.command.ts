@@ -3,6 +3,8 @@ import { RidePlace, RidePosition } from '@modules/ride/domain/ride.types';
 
 export class EstimateRideCommand extends Command {
   readonly passengerId: string;
+  // From 1 to 8.
+  readonly passengerCount: number;
   readonly origin: RidePosition;
   // The pickup address found by the app on Mapbox, if any.
   readonly originName?: string;
@@ -14,6 +16,7 @@ export class EstimateRideCommand extends Command {
   constructor(props: CommandProps<EstimateRideCommand>) {
     super(props);
     this.passengerId = props.passengerId;
+    this.passengerCount = props.passengerCount;
     this.origin = props.origin;
     this.originName = props.originName;
     this.destination = props.destination;

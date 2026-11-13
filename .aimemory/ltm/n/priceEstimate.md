@@ -20,9 +20,9 @@ formula: per Mapbox segment max(km price, time price), mode S of the arrêté du
 range: low = A by day, B by night; high = C by day, D by night; each segment at the hour the taxi passes it
 night: 19h–7h Europe/Paris, all day on Sundays and public holidays
 approach billed at A/B from the closest free taxi; none within 5 km gives RIDE.NO_DRIVER_AVAILABLE
-supplements left out, the app does not ask passengers or luggage
+no luggage notion at all since 2026-11-13 (user decision); the passengers are asked (1 to 8) and 4 € (tariff.extraPassengerCents) per passenger from the fifth is added after the minimum fare, spec docs/specs/nombre-de-passagers.md
 no national-cap fallback: unknown département gives RIDE.AREA_NOT_SERVED
 only the "Taxi" offer for now
 Bas-Rhin 2026: arrêté du 26 janvier 2026, validFrom 2026-02-01, pickup 310, km A 101 B 143 C 202 D 286, hourly 3780, minimum 800, night 1140 to 420, ALSACE_MOSELLE
 the range is wide by design: C is twice A, so 19,6 km gives about 20 € of gap
-the tariff row is inserted by hand in SQL, not by a migration: redo it after a reset
+the tariff row is inserted by hand in SQL, not by a migration: redo it after a reset, and give it extraPassengerCents = 400 (the column has no default; the migration of 2026-11-13 only filled the existing row)

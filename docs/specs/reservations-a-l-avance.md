@@ -291,7 +291,7 @@ L'héritage intégré de Postgres (`INHERITS`) est écarté : sa documentation p
 
 - Choisir un autre point de départ que sa position : un passager qui réserve depuis son bureau un taxi pour chez lui ne peut pas encore le faire.
 - Modifier une réservation : il faut l'annuler et en refaire une.
-- Réservations récurrentes, plusieurs passagers, bagages, véhicule adapté : les lignes « 2 bagages » et « Taxi Accès demandé » du chauffeur restent simulées.
+- Réservations récurrentes, véhicule adapté : la ligne « Taxi Accès demandé » du chauffeur reste simulée. Les passagers sont réels depuis le 2026-11-13 (`nombre-de-passagers.md`) ; les bagages n'existent plus dans l'app.
 - Rappel au passager la veille ou une heure avant.
 - Interrupteur « Recevoir les réservations » : il reste simulé.
 - Frais d'annulation ou de non-présentation : l'app ne prend aucun paiement.
@@ -409,7 +409,7 @@ Les étapes 1 à 6 ont été codées d'un coup. Une seule migration couvre les �
 
 - [x] Vraie `DriverBookingRemoteDataSource` : disponibles autour de sa position, acceptées, accepter, se désister
 - [x] Bouton « Se désister » dans « Acceptées »
-- [x] Passagers et bagages : valeurs fixes (1 passager, 0 bagage) dans le modèle, comme pour une offre en direct ; la longueur du trajet est la vraie
+- [x] Passagers et bagages : valeurs fixes (1 passager, 0 bagage) dans le modèle (depuis le 2026-11-13, les passagers sont réels et les bagages n'existent plus), comme pour une offre en direct ; la longueur du trajet est la vraie
 - [x] Mêmes vérifications qu'à l'étape 5
 
 Numérotation des étapes ajoutées après coup : 6.1 à 6.6, à la place de 6 bis à 6 septies (demande du user, 2026-11-04).

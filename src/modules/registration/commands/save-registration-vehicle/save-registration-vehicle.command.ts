@@ -9,6 +9,7 @@ export class SaveRegistrationVehicleCommand extends Command {
   readonly adsNumber: string;
   readonly communeCode: string;
   readonly communeName: string;
+  readonly passengerSeats: number;
 
   constructor(props: CommandProps<SaveRegistrationVehicleCommand>) {
     super(props);
@@ -19,5 +20,6 @@ export class SaveRegistrationVehicleCommand extends Command {
     this.adsNumber = props.adsNumber;
     this.communeCode = props.communeCode;
     this.communeName = props.communeName;
+    this.passengerSeats = props.passengerSeats;
   }
 }

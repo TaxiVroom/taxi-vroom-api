@@ -56,3 +56,12 @@ Noté le 2026-11-07, décision du user (point 1 de `docs/specs/documents-du-chau
 ## Faire vérifier par un juriste l'heure de fin de validité d'un document
 
 Noté le 2026-11-07, demandé par le user. L'app considère qu'un document qui « expire le 11 mars » est valable jusqu'au 11 mars à 24 h, heure de Paris (`docs/specs/documents-du-chauffeur.md`, ligne « Fin de validité »), par analogie avec l'article 642 du Code de procédure civile, qui vise les délais de procédure. Aucun texte trouvé sur la validité d'une carte professionnelle ou d'un permis le jour de sa date. À confirmer auprès d'un juriste ou de la préfecture avant la mise en service.
+
+## Mettre à jour Prisma (7 vers 8)
+
+Noté le 2026-11-13, demandé par le user : « à un moment donné faudra s'en occuper ». Le projet est en Prisma 7.10.0 (`package.json` : `^7.4.0`). Chaque commande `prisma` affiche « Update available 7.10.0 -> 8.0.0-rc.33 », une version majeure encore en préversion (`rc`), avec un guide de migration : https://pris.ly/d/major-version-upgrade.
+
+- **Pas avant une version stable** : ne pas passer à une `rc`, ni sur demande implicite. La commande proposée par Prisma (`npm i --save-dev prisma@latest` et `npm i @prisma/client@latest`) installerait cette `rc`.
+- **Quand 8.0 sera stable** : lire le guide de migration (doc officielle, règle `officialDocs`) avant tout, puis écrire une spec courte dans `docs/specs/` : ce qui change pour `schema.prisma`, `prisma.config.ts`, le client généré dans `src/generated/prisma`, l'adaptateur `@prisma/adapter-pg`, et `PrismaRepositoryBase.client` (typé `any`, donc `tsc` ne verrait pas une rupture).
+- **À vérifier à ce moment-là** : les migrations déjà appliquées, les requêtes brutes (`$queryRaw` : `FOR UPDATE SKIP LOCKED`, `DISTINCT ON`) et les scripts `migration:*` de `package.json`.
+- Les commandes `npm` se lancent par le user (règle `npmSelfRun`).

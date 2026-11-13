@@ -51,6 +51,7 @@ export class SaveRegistrationVehicleService implements ICommandHandler {
       adsNumber: command.adsNumber,
       communeCode: command.communeCode,
       communeName: command.communeName,
+      passengerSeats: command.passengerSeats,
     });
     if (saved.isErr()) return Err(saved.unwrapErr());
     const available = registration.confirmVehicleAvailable(

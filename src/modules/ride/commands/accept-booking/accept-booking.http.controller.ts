@@ -20,6 +20,7 @@ import {
   RideBookingOverlapError,
   RideBookingTakenError,
   RideDriverDocumentsEndBeforeError,
+  RideNotEnoughSeatsError,
   RideNotFoundError,
   RideWrongStepError,
 } from '@modules/ride/domain/ride.errors';
@@ -38,6 +39,8 @@ export class AcceptBookingHttpController {
     description:
       'RIDE.BOOKING_TAKEN: another driver took it; RIDE.BOOKING_OVERLAP: ' +
       'another booking of this driver is less than an hour away; ' +
+      'RIDE.NOT_ENOUGH_SEATS: more passengers than the taxi has seats ' +
+      '(never shown by the app, which only lists the bookings that fit); ' +
       'RIDE.WRONG_STEP: not waiting for a driver anymore',
   })
   @Roles(UserRoles.driver)
@@ -62,6 +65,7 @@ export class AcceptBookingHttpController {
           error instanceof RideBookingTakenError ||
           error instanceof RideBookingOverlapError ||
           error instanceof RideDriverDocumentsEndBeforeError ||
+          error instanceof RideNotEnoughSeatsError ||
           error instanceof RideWrongStepError
         ) {
           throw new ConflictException({

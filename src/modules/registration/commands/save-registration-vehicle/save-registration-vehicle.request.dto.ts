@@ -1,9 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEnum,
+  IsInt,
   IsString,
   Matches,
+  Max,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 import { VehicleColor } from '@modules/registration/domain/registration.types';
@@ -43,4 +46,15 @@ export class SaveRegistrationVehicleRequestDto {
   @MinLength(1)
   @IsString()
   readonly communeName: string;
+
+  @ApiProperty({
+    example: 4,
+    description:
+      'Passenger seats, from 1 to 8: a taxi has eight seats at most ' +
+      '(article L3121-1 du code des transports).',
+  })
+  @Max(8)
+  @Min(1)
+  @IsInt()
+  readonly passengerSeats: number;
 }

@@ -23,4 +23,7 @@ export class DriverVehicleResponseDto {
 
   @ApiProperty({ example: 'Strasbourg' })
   communeName: string;
+
+  @ApiProperty({ example: 4, description: 'Passenger seats, from 1 to 8' })
+  passengerSeats: number;
 }

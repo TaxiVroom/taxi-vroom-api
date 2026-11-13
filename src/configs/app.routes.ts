@@ -88,5 +88,6 @@ export const routesV1 = {
     noShow: `${ridesRoot}/:rideId/no-show`,
     rating: `${ridesRoot}/:rideId/rating`,
     boardingCode: `${ridesRoot}/:rideId/boarding-code`,
+    checkout: `${ridesRoot}/:rideId/checkout`,
   },
 };

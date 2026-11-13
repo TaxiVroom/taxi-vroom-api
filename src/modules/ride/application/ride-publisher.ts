@@ -46,6 +46,7 @@ export class RidePublisher {
       destination: props.destination,
       estimatedPrice: props.estimatedPrice,
       passengerFirstName: participants.passenger.firstName,
+      passengerCount: props.passengerCount,
       kind: ride.kind,
       pickupAt: ride.schedule?.pickupAt,
     });

@@ -81,6 +81,9 @@ export interface RegistrationVehicle {
   // The commune de rattachement: its INSEE code and its name.
   communeCode: string;
   communeName: string;
+  // From 1 to 8: a taxi has eight seats at most. Spec
+  // docs/specs/nombre-de-passagers.md.
+  passengerSeats: number;
 }
 
 // Whether another driver or registration already has the plate, or the taxi

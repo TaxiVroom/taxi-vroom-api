@@ -13,6 +13,15 @@ import {
   DriverDocumentStatesReadModel,
   GetDriverDocumentStatesQuery,
 } from '@modules/driver/queries/get-driver-document-states/get-driver-document-states.query-handler';
+import {
+  DriverSeatsReadModel,
+  GetDriverSeatsQuery,
+} from '@modules/driver/queries/get-driver-seats/get-driver-seats.query-handler';
+
+// An online driver with the seats of their taxi, 0 when unknown.
+interface SeatedDriver extends OnlineDriver {
+  passengerSeats: number;
+}
 
 // When two rides pick the same driver at the same time, the database lets
 // one through: the other one tries the next driver.
@@ -39,7 +48,9 @@ export class RideDispatcher {
       longitude,
       RideEntity.reachableRadiusMeters,
     );
-    const onlineDrivers = await this.withoutBlockedDocuments(around);
+    const onlineDrivers = await this.withSeats(
+      await this.withoutBlockedDocuments(around),
+    );
     const takenByOtherRides = new Set<string>();
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
@@ -70,9 +81,28 @@ export class RideDispatcher {
     return drivers.filter((driver) => !blocked.has(driver.driverId));
   }
 
+  // The seats of each taxi, to offer the ride only to those that fit the
+  // passengers. One read for all the candidates. Spec
+  // docs/specs/nombre-de-passagers.md.
+  private async withSeats(drivers: OnlineDriver[]): Promise<SeatedDriver[]> {
+    if (drivers.length === 0) return [];
+    const seats: DriverSeatsReadModel[] = await this.queryBus.execute(
+      new GetDriverSeatsQuery({
+        driverIds: drivers.map((driver) => driver.driverId),
+      }),
+    );
+    const seatsOf = new Map(
+      seats.map((entry) => [entry.driverId, entry.passengerSeats]),
+    );
+    return drivers.map((driver) => ({
+      ...driver,
+      passengerSeats: seatsOf.get(driver.driverId) ?? 0,
+    }));
+  }
+
   private async tryOffer(
     rideId: string,
-    onlineDrivers: OnlineDriver[],
+    onlineDrivers: SeatedDriver[],
     takenByOtherRides: Set<string>,
   ): Promise<void> {
     let triedDriverId: string | undefined;

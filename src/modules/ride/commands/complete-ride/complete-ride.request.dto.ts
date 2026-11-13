@@ -15,19 +15,19 @@ import {
 // The supplements allowed depend on the city's fare rules, not known by the
 // server yet: it takes them as the driver's app shows them.
 export class RideSupplementRequestDto {
-  @ApiProperty({ example: 'bulky-luggage' })
+  @ApiProperty({ example: 'fifth-passenger' })
   @MaxLength(50)
   @MinLength(1)
   @IsString()
   readonly supplementId: string;
 
-  @ApiProperty({ example: 'Bagage encombrant' })
+  @ApiProperty({ example: '5e passager et plus' })
   @MaxLength(100)
   @MinLength(1)
   @IsString()
   readonly label: string;
 
-  @ApiProperty({ example: 200 })
+  @ApiProperty({ example: 400 })
   @Max(10_000)
   @Min(0)
   @IsInt()

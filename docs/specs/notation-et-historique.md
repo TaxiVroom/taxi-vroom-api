@@ -20,7 +20,7 @@ Les deux écrans existent mais tournent sur de fausses données :
 | Qui note | Le passager de la course, seulement lui |
 | Quand | Sur l'écran de fin de course, une seule fois, sans modification ensuite |
 | Note | De 1 à 5 étoiles, entier |
-| Compliments | 0 ou plusieurs, dans une liste fixe : conduite douce, ponctuel, aide bagages |
+| Compliments | 0 ou plusieurs, dans une liste fixe : conduite douce, ponctuel (« aide bagages » retiré le 2026-11-13, avec toute la notion de bagage de l'app) |
 | Pas de note | Le passager peut terminer sans noter : rien n'est envoyé, aucune note à 0 |
 | Envoi | Indicateur de chargement sur « Terminer » |
 | Échec de l'envoi | Ne bloque pas le passager : il revient à l'accueil avec le message « Votre note n'a pas pu être envoyée. ». La note est perdue, un écran de plus pour un cas rare a été écarté |

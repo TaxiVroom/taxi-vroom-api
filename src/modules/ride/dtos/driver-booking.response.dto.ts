@@ -30,6 +30,9 @@ export class DriverBookingResponseDto {
   @ApiProperty({ example: 'Léa' })
   passengerFirstName: string;
 
+  @ApiProperty({ example: 3, description: 'How many people travel, 1 to 8' })
+  passengerCount: number;
+
   @ApiProperty({
     example: false,
     description:

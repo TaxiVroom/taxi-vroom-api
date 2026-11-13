@@ -19,6 +19,7 @@ import { GetMyAccountHttpController } from './queries/get-my-account/get-my-acco
 import { FindMyVehicleQueryHandler } from './queries/find-my-vehicle/find-my-vehicle.query-handler';
 import { GetMyDocumentsHttpController } from './queries/get-driver-document-states/get-my-documents.http.controller';
 import { GetDriverDocumentStatesQueryHandler } from './queries/get-driver-document-states/get-driver-document-states.query-handler';
+import { GetDriverSeatsQueryHandler } from './queries/get-driver-seats/get-driver-seats.query-handler';
 import { FindDriversWithoutDocumentQueryHandler } from './queries/find-drivers-without-document/find-drivers-without-document.query-handler';
 import { GoOnlineHttpController } from './commands/go-online/go-online.http.controller';
 import { GoOnlineService } from './commands/go-online/go-online.service';
@@ -46,6 +47,7 @@ const commandHandlers: Provider[] = [
 const queryHandlers: Provider[] = [
   FindMyVehicleQueryHandler,
   GetDriverDocumentStatesQueryHandler,
+  GetDriverSeatsQueryHandler,
   FindDriversWithoutDocumentQueryHandler,
 ];
 

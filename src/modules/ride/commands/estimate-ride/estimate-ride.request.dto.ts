@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  IsInt,
   IsISO8601,
   IsNumber,
   IsOptional,
@@ -11,6 +12,18 @@ import {
 } from 'class-validator';
 
 export class EstimateRideRequestDto {
+  @ApiProperty({
+    example: 3,
+    description:
+      'How many people travel, from 1 to 8: a taxi has eight seats at most ' +
+      '(article L3121-1 du code des transports). The price counts a ' +
+      'supplement for each passenger from the fifth.',
+  })
+  @Max(8)
+  @Min(1)
+  @IsInt()
+  readonly passengerCount: number;
+
   @ApiProperty({ example: 48.5734 })
   @Max(90)
   @Min(-90)

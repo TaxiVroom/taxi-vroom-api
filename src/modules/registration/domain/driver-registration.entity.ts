@@ -76,6 +76,7 @@ export class DriverRegistrationEntity extends RegistrationEntity<DriverRegistrat
       adsNumber: vehicle.adsNumber.trim(),
       communeCode: vehicle.communeCode,
       communeName: vehicle.communeName.trim(),
+      passengerSeats: vehicle.passengerSeats,
     };
     return Ok(null);
   }

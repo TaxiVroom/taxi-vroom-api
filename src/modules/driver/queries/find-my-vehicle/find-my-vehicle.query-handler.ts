@@ -11,6 +11,7 @@ export interface DriverVehicleReadModel {
   adsNumber: string;
   communeCode: string;
   communeName: string;
+  passengerSeats: number;
 }
 
 export class FindMyVehicleQuery extends QueryBase {
@@ -42,6 +43,7 @@ export class FindMyVehicleQueryHandler implements IQueryHandler {
       adsNumber: vehicle.adsNumber,
       communeCode: vehicle.communeCode,
       communeName: vehicle.communeName,
+      passengerSeats: vehicle.passengerSeats,
     });
   }
 }

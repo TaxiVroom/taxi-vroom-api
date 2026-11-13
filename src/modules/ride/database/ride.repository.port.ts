@@ -86,4 +86,8 @@ export interface RideRepositoryPort extends RepositoryPort<RideEntity> {
   // The tariffs in force in the département at that time: the latest arrêté
   // already valid. None where the app does not work yet.
   findTariff(departmentCode: string, at: Date): Promise<Option<TaxiTariff>>;
+
+  // The supplement for each passenger from the fifth, in the tariff the ride
+  // was estimated with.
+  findExtraPassengerCents(rideId: string): Promise<number>;
 }
