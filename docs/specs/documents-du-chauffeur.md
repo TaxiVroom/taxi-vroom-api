@@ -260,7 +260,7 @@ Une étape à la fois, avec une pause et ta validation entre chaque ; ici, toute
 
 - [x] Doc officielle des règles lue : une règle peut lire une autre branche par `root.child(...)` et comparer `$uid` à `auth.uid`. Que le SDK Admin passe outre les règles n'y est pas écrit : à vérifier
 - [x] `POST /v1/drivers/me/online` (409 `DRIVER.DOCUMENTS_BLOCKING`) et `onlineAllowed/<uid>` ; retrait groupé en un `update`
-- [ ] Règles Firebase publiées par le user dans la console (texte ci-dessous)
+- [x] Règles Firebase publiées par le user dans la console (texte ci-dessous), 2026-11-14 ; à vérifier par un test chauffeur (plus de « Permission denied » sur `onlineAllowed`)
 - [x] `RideEnded` levé par `RideEntity` (terminée, annulée avec un chauffeur, absence, désistement) ; le module chauffeur passe hors ligne un chauffeur bloqué, la course qui vient de finir exclue
 - [x] Dispatch : chauffeurs bloqués écartés en une lecture ; réservations : liste filtrée, acceptation refusée (`RIDE.DRIVER_DOCUMENTS_END_BEFORE`), `BookingStarter` traite un chauffeur bloqué comme hors ligne
 

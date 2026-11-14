@@ -27,4 +27,6 @@ earnings: driver "Gains" tab and "Conduire" figures real (GET drivers/me/earning
 homeWork: passenger's "Maison" and "Travail" (passenger module, me/saved-places), spec docs/specs/maison-et-travail.md
 recentDestinations: GET rides/recent-destinations (last 3 different, completed rides), spec docs/specs/destinations-recentes.md
 passengerCount: 1 to 8 passengers chosen by the passenger, seats asked of the driver, supplement from the fifth in the estimate and at the end of the ride, coded not tested, spec docs/specs/nombre-de-passagers.md
+ridesByPages: GET rides/booked and GET rides are paged (limit, page, { data, count, limit, page }), id as second sort, index on rides.passengerId, coded, waits for the migration, spec docs/specs/mes-courses-par-pages.md
+driverBookingsByPages: GET bookings/available and bookings/accepted are paged the same way, coded, untested on a device, spec docs/specs/reservations-chauffeur-par-pages.md
 next: to choose with the user; ideas and maintenance noted for later in docs/a-faire.md (among them the Prisma 7 to 8 upgrade, not before 8.0 is stable: prefs prismaVersion)

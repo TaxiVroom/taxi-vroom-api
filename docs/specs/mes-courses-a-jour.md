@@ -1,6 +1,8 @@
 # « Mes courses » et « Réservations » à jour
 
 > Statut : codée, testée par le user et commitée le 2026-11-05.
+>
+> Depuis le 2026-11-14, « Mes courses » charge ses listes par pages de 20 et recharge seulement la liste visible, depuis le début : voir `mes-courses-par-pages.md`. Le reste de cette spec (notifications qui rechargent la liste, côté chauffeur) reste vrai.
 
 Concerne `taxi-vroom-mobile` seulement : l'API n'est pas touchée.
 
@@ -44,6 +46,7 @@ Pendant chaque rechargement, un rond remplace la liste, jusqu'à la réponse de 
 | Une réponse en cours | Côté chauffeur, un rechargement qui arrive pendant « Accepter », « Refuser » ou « Je pars » attend la fin de la réponse : les listes ne changent pas sous son doigt |
 | Réservation disponible annulée ou prise par un autre (décision du user, 2026-11-05) | Constaté par le user : sans chauffeur engagé, personne n'est prévenu, et la réservation reste dans « Disponibles » chez les chauffeurs. Rien de plus pour la v1 : le serveur refuse « Accepter », et l'app recharge alors les listes. Écartés pour l'instant : recharger toutes les 30 s, ou un signal Firebase que l'API changerait à chaque réservation disponible modifiée |
 | Échec d'une réponse (décision du user, 2026-11-05, codé sans spec à sa demande) | Le message en bas de l'écran, comme ailleurs dans l'app, au lieu d'un petit texte gris : « Action impossible » chez le chauffeur, « Annulation impossible » dans « À venir » chez le passager. Un refus du serveur recharge la liste ; une coupure réseau la garde. Côté passager, un 409 donne « Cette réservation a déjà commencé ou a été annulée. » au lieu de « Erreur serveur (409) » |
+| Carte d'une course passée (demande du user, 2026-11-13) | Le passager voit sur chaque carte : la date et l'heure, le prix, « Destination : » suivi de l'adresse d'arrivée en entier (validé par le user, 2026-11-13) et « Départ : » suivi de l'adresse de prise en charge, chacune écrite sur autant de lignes que nécessaire, sans « … ». Le bouton de téléchargement du reçu est retiré, la fonction n'existe pas encore. API inchangée : elle renvoyait déjà les quatre infos |
 | Temps réel | Pas pour la v1 : rechargement à la notification. Une réservation change rarement, souvent des heures avant la prise en charge |
 | API | Inchangée : ajouter l'identifiant de la course à ces notifications ferait ouvrir un écran de course qui n'existe pas encore |
 

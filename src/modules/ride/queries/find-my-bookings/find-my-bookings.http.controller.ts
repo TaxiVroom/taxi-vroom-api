@@ -1,12 +1,14 @@
-import { Controller, Get, HttpStatus } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Query } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { routesV1 } from '@config/app.routes';
+import { PaginatedQueryRequestDto } from '@libs/api/paginated-query.request.dto';
+import { Paginated } from '@libs/ddd';
 import { CurrentUser } from '@modules/auth/current-user.decorator';
 import { RegisteredUser } from '@modules/auth/domain/authenticated-user';
 import { Roles } from '@modules/auth/roles.decorator';
 import { UserRoles } from '@modules/user/domain/user.types';
-import { PassengerBookingResponseDto } from '@modules/ride/dtos/passenger-booking.response.dto';
+import { PassengerBookingPaginatedResponseDto } from '@modules/ride/dtos/passenger-booking.paginated.response.dto';
 import {
   FindMyBookingsQuery,
   PassengerBooking,
@@ -21,17 +23,21 @@ export class FindMyBookingsHttpController {
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    type: PassengerBookingResponseDto,
-    isArray: true,
+    type: PassengerBookingPaginatedResponseDto,
   })
   @Roles(UserRoles.passenger)
   @Get(routesV1.ride.booked)
   async findMyBookings(
     @CurrentUser() user: RegisteredUser,
-  ): Promise<PassengerBookingResponseDto[]> {
-    const bookings: PassengerBooking[] = await this.queryBus.execute(
-      new FindMyBookingsQuery({ passengerId: user.id }),
+    @Query() queryParams: PaginatedQueryRequestDto,
+  ): Promise<PassengerBookingPaginatedResponseDto> {
+    const bookings: Paginated<PassengerBooking> = await this.queryBus.execute(
+      new FindMyBookingsQuery({
+        passengerId: user.id,
+        limit: queryParams.limit,
+        page: queryParams.page,
+      }),
     );
-    return bookings;
+    return new PassengerBookingPaginatedResponseDto(bookings);
   }
 }

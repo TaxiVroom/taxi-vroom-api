@@ -73,7 +73,8 @@ export class FindMyRidesQueryHandler implements IQueryHandler {
       this.prisma.ride.findMany({
         where,
         select: completedRide,
-        orderBy: { createdAt: 'desc' },
+        // The id breaks ties: two rides at the same time keep their page.
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: query.limit,
         skip: query.offset,
       }),

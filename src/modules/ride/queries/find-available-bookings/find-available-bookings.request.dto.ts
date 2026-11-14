@@ -1,9 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsNumber, Max, Min } from 'class-validator';
+import { PaginatedQueryRequestDto } from '@libs/api/paginated-query.request.dto';
 
-// The driver's position: the bookings around it are shown.
-export class FindAvailableBookingsRequestDto {
+// The driver's position: the bookings around it are shown, page by page.
+export class FindAvailableBookingsRequestDto extends PaginatedQueryRequestDto {
   @ApiProperty({ example: 48.5734 })
   @Max(90)
   @Min(-90)

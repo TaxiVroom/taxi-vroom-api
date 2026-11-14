@@ -2,6 +2,10 @@
 
 Idées notées avec le user, pas encore spécifiées. Chacune commence par une spec dans `docs/specs/` avant tout code.
 
+## Partager son trajet
+
+Noté le 2026-11-13, décision du user : les deux boutons « Partager » de l'écran de course du passager (taxi qui arrive, course en cours) étaient factices et sont supprimés de l'app. La feature sera codée plus tard, après sa spec.
+
 ## Une vraie carte de la demande pour le chauffeur
 
 Noté le 2026-11-05, décision du user : après le lancement. Le chauffeur verrait sur sa carte les zones où les passagers commandent le plus, comme dans les applis du marché, pour savoir où attendre. Il faut assez de vraies commandes pour que la carte dise vrai : avec quelques tests par jour, elle serait vide ou fausse. Le texte et les ronds simulés (« Zone Centre, 3 taxis libres… Demande forte : gare ») ont été retirés le même jour.

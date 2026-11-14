@@ -480,6 +480,8 @@ model Ride {
   cancellation  RideCancellation?
   schedule      RideSchedule?
 
+  /// "Mes courses" lists a passenger's rides page by page.
+  @@index([passengerId])
   @@map("rides")
 }
 
