@@ -5,8 +5,7 @@ Backend of **Taxi Vroom**, a ride-hailing app for French licensed taxis: legal p
 Mobile app (Flutter, passenger and driver in one app): [taxi-vroom-mobile](https://github.com/TaxiVroom/taxi-vroom-mobile)
 
 ## Demo
-
-[![Watch the demo](https://img.youtube.com/vi/VIDEO_ID/maxresdefault.jpg)](VIDEO_URL)
+https://github.com/user-attachments/assets/32111126-94c7-4686-b714-ef36e642e6c6
 
 ## Architecture
 
