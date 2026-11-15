@@ -1,6 +1,6 @@
 # Choisir son point de prise en charge
 
-> Statut : livrée sur Android le 2026-11-05, testée par le user ; iOS préparé, non testé.
+> Statut : livrée sur Android le 2026-11-05, testée par le user ; iOS préparé, non testé. Étape 6 (« Position actuelle » relue, 2026-11-15) codée, corrigée selon le user le 2026-11-15, non commitée.
 
 Concerne `taxi-vroom-mobile` seulement : l'API n'a rien à changer (point 2 de « À valider », validé).
 
@@ -43,6 +43,39 @@ Les deux champs remplis → choix du taxi, prix calculé depuis le départ chois
 Chauffeur : guidé vers ce point (rien ne change chez lui : il reçoit déjà le départ de la course)
 ```
 
+#### 6. Le passager qui s'est déplacé depuis l'ouverture de l'app (décision du 2026-11-15)
+
+1. Le passager ouvre l'app à un endroit, puis se déplace.
+2. Il touche « Où allez-vous ? » (ou « Maison », « Travail ») : un chargement s'affiche sur l'accueil, sans rien à toucher, le temps que sa position soit lue.
+3. « Votre trajet » s'ouvre alors, « Position actuelle » étant l'endroit où il se trouve à cet instant, jamais l'ancienne position.
+4. Il choisit sa destination : le prix, l'itinéraire et le nom du départ partent de cette position.
+5. S'il avait choisi un départ lui-même (suggestion, carte, « Maison », « Travail »), rien n'est relu : ce départ reste.
+6. Si la position ne peut pas être lue, un message s'affiche avec « Réessayer ».
+
+```mermaid
+sequenceDiagram
+    actor P as Passager
+    participant A as App
+    participant M as Mapbox
+    participant S as API
+
+    P->>A: 1. Ouvre l'app, puis se déplace
+    P->>A: 2. Touche « Où allez-vous ? »
+    alt départ non choisi
+        A->>A: 3. getCurrentPosition() (chargement)
+        alt position introuvable
+            A-->>P: 6. Message et « Réessayer »
+        else position lue
+            A->>M: 3. /reverse, adresse de la position
+        end
+    else départ déjà choisi
+        A-->>P: 5. Le départ choisi reste, rien n'est relu
+    end
+    P->>A: 4. Choisit sa destination
+    A->>S: 4. POST /v1/rides (originLatitude, originLongitude, originName)
+    S-->>A: estimation
+```
+
 ### Décisions prises
 
 | Sujet | Décision |
@@ -61,13 +94,14 @@ Chauffeur : guidé vers ce point (rien ne change chez lui : il reçoit déjà le
 | Tout sur Mapbox (validé par le user, 2026-11-11, remplace les deux lignes au-dessus) | La Géoplateforme a été en panne toute la journée du 2026-11-11 (504) : « Adresse inconnue » sous chaque épingle, départ gardé sans nom. Le user a demandé de tout passer sur Mapbox. Ce que voit le passager : sous l'épingle, l'adresse donnée par Mapbox ; le chauffeur et l'historique voient cette même adresse. *(App → Mapbox `/reverse` pour l'épingle et pour « Position actuelle » ; App → API `POST /v1/rides` avec `originName` ; l'API ne cherche plus d'adresse, la Géoplateforme n'est plus appelée nulle part.)* Sans adresse Mapbox, le départ garde le nom de secours « Position de départ ». Le risque de licence de Mapbox (« only available for temporary use ») est le même que pour la destination : `docs/a-faire.md`. Spec suivie : `heure-de-prise-en-charge.md`, étape 1 ter |
 | Confirmer le point de prise en charge (validé par le user, 2026-11-05) | Un écran avant « Commander » et « Réserver », la carte centrée sur le départ, ajustable : l'usage du marché, un appui de plus par commande |
 | Départ loin du téléphone (validé par le user, 2026-11-05) | Permis sans limite ni avertissement, pour une course immédiate comme pour une réservation ; si personne n'est là, l'absence existe déjà |
+| « Position actuelle » relue à l'ouverture de « Votre trajet » (validé par le user, 2026-11-15) | Constat : la position était lue une seule fois à l'ouverture de l'app (`LoadPassengerHomeUseCase`, `PassengerHome.position`) et jamais relue : un passager qui s'était déplacé depuis commandait pour son ancienne position, alors que les taxis proches suivaient sa position réelle. Ce que voit le passager : 1. il touche « Où allez-vous ? » ; 2. « Votre trajet » s'ouvre, « Position actuelle » étant sa position du moment (un court chargement s'il faut attendre le GPS, jamais l'ancienne position affichée en attendant) ; 3. le choix du taxi, le prix et l'itinéraire partent de cette position. Un départ choisi (suggestion, carte, « Maison », « Travail ») reste fixe, il n'est jamais remplacé. Écarté : relire au tap sur « Commander » (le prix affiché serait celui d'un autre endroit que la commande). Raison : le comportement le plus simple pour le passager, le prix affiché étant celui de l'endroit où il commande ; aucune documentation officielle des applis du marché ne décrit un suivi automatique du départ, elles laissent surtout le corriger à la main *(App seulement : `getCurrentPosition()` à l'ouverture de « Votre trajet » quand `pickupPlace` est null ; l'API ne change pas)* |
 | L'API | Elle prend déjà n'importe quel départ (`originLatitude`, `originLongitude`) et le nomme elle-même. Les chauffeurs cherchés sont ceux autour du départ, et la zone tarifaire est celle du départ : c'est déjà le cas |
 
 ### Règles
 
 | Cas | Résultat |
 |---|---|
-| Le passager ne touche pas au départ | Départ = position du téléphone, comme aujourd'hui |
+| Le passager ne touche pas au départ | Départ = position du téléphone **au moment où il ouvre « Votre trajet »** (relue à chaque ouverture, validé par le user, 2026-11-15), et non plus celle de l'ouverture de l'app |
 | Départ choisi dans les suggestions ou sur la carte | Le prix, les taxis cherchés et la zone tarifaire partent de ce point |
 | « Position actuelle » choisie | Retour à la position du téléphone |
 | Départ hors d'une zone servie | Le message actuel de l'estimation (`RIDE.AREA_NOT_SERVED`) |
@@ -152,6 +186,16 @@ Une étape à la fois, avec une pause et ta validation entre chaque.
 - [x] Point ajusté à la confirmation : le prix est recalculé
 
 Testé et validé par le user sur Android, 2026-11-05. iOS non testé, faute d'iPhone.
+
+### Étape 6 : « Position actuelle » relue (mobile, décision du 2026-11-15, attend le go du user)
+
+- [x] Doc officielle de `geolocator` 14.1.0 relue (`getCurrentPosition` : « Returns the current position », un relevé frais qui peut prendre plusieurs secondes, d'où le chargement ; lève `TimeoutException` et `LocationServiceDisabledException`, déjà traduites en `Failure` par `LocationRepositoryImpl`)
+- [x] Test d'abord (TDD) : `RefreshPickupPositionUseCase`, 4 tests rouges puis verts : position relue sans lieu choisi, lieu choisi gardé sans interroger le téléphone, échec rendu tel quel, lieux enregistrés intacts
+- [x] Codé, écarts faits en codant (techniques, dits au user) : la position est relue **avant** d'ouvrir l'écran suivant, avec un chargement par-dessus l'accueil et sans aucun appui possible, plutôt qu'après l'ouverture (la page « Votre trajet » reçoit son point de départ à sa création : l'ouvrir avant aurait montré l'ancienne position) ; le même chemin sert « Où allez-vous ? » et les raccourcis « Maison » / « Travail », qui ouvraient le choix du taxi avec la même ancienne position ; un échec laisse le passager sur l'accueil avec le message « Position introuvable » et « Réessayer » *(`PassengerHomeBloc` : événement `PassengerPositionRefreshed`, état `isLocating` et `locationFailure`)*
+- Lecture de la position à l'ouverture de « Votre trajet » quand `pickupPlace` est null, avec un chargement, sans afficher l'ancienne position ; échec de position : message avec « Réessayer » (`loaderAlways`, `resultErrors`) ; la lecture et la règle (départ choisi gardé, sinon position relue) sont dans un use case du domaine, jamais dans le bloc (`logicInUseCases`) ; on réutilise `LocationRepository.getCurrentPosition()` et `PassengerHome`/`PassengerFlowBloc` existants, et on demande avant d'ajouter une nouvelle classe (`reuseFirst`) ; Android et iOS (`platforms`) : iOS préparé, non testé faute d'iPhone
+- [x] Vérifications : `dart format` sur les fichiers touchés, `flutter analyze` sans remarque sur eux (les anciennes restent), 197 tests verts, lint Bloc non lu (il demande une mise à jour en interactif)
+- [x] Test par le user, validé le 2026-11-15 (« problème corrigé », sans détail par cas ; position coupée et « Maison » non confirmés) : ouvrir l'app, changer la position de l'émulateur, toucher « Où allez-vous ? » : le départ est la nouvelle position ; idem avec « Maison » ; position coupée : message et « Réessayer »
+- [ ] Ne pas toucher à `SharedPositionStream` ni à la présence du chauffeur
 
 ### Fin de feature
 
