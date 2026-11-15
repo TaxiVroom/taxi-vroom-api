@@ -69,3 +69,11 @@ Noté le 2026-11-13, demandé par le user : « à un moment donné faudra s'en o
 - **Quand 8.0 sera stable** : lire le guide de migration (doc officielle, règle `officialDocs`) avant tout, puis écrire une spec courte dans `docs/specs/` : ce qui change pour `schema.prisma`, `prisma.config.ts`, le client généré dans `src/generated/prisma`, l'adaptateur `@prisma/adapter-pg`, et `PrismaRepositoryBase.client` (typé `any`, donc `tsc` ne verrait pas une rupture).
 - **À vérifier à ce moment-là** : les migrations déjà appliquées, les requêtes brutes (`$queryRaw` : `FOR UPDATE SKIP LOCKED`, `DISTINCT ON`) et les scripts `migration:*` de `package.json`.
 - Les commandes `npm` se lancent par le user (règle `npmSelfRun`).
+
+## Faire glisser le taxi entre deux positions sur la carte du chauffeur
+
+Noté le 2026-11-15, décision du user : « le glissement on s'en occupera plus tard ». Sur la carte de guidage du chauffeur, la flèche saute d'une position GPS à la suivante (elle est effacée puis recréée à chaque position) au lieu de glisser, alors que la caméra glisse sur 1 s. Le chauffeur a l'impression que sa position se rafraîchit par à-coups, toutes les 3 secondes (`gpsInterval` dans l'`arch.md` du mobile).
+
+- **Ce qui est constaté** : la carte du chauffeur lit le GPS de son téléphone, jamais Firebase. Les 3 s viennent du réglage `_androidInterval` (3 s, choisi pour économiser la batterie, rappelé par le user le 2026-11-15).
+- **Pistes** : faire glisser le repère entre deux positions (le plus utile, d'après mon hypothèse : aucune source publique ne donne ce que font les grandes applis) ; ou descendre l'intervalle du GPS, avec un coût de batterie à mesurer (un seul chiffre trouvé, venant d'un blog tiers : environ 40 % par heure à 1 s contre moins de 12 % à 3-10 s, pas mesuré sur cette app).
+- **Hors périmètre de la spec `fleche-du-chauffeur.md`** (ligne « Hors périmètre »). À écrire dans une spec à part avant tout code.
