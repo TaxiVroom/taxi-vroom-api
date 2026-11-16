@@ -79,5 +79,9 @@ The app validates its environment at boot and refuses to start if a variable is 
 - Push notifications on iOS, which is prepared but untested for lack of an Apple device.
 - A heartbeat for drivers whose phone loses the network for good.
 
+## How I work with AI
+
+I set up a versioned [`.aimemory/`](./.aimemory) knowledge base in each repo that AI coding assistants must follow: the architecture, and working rules such as "write the spec first, no code without my approval". It lives in git, so the rules are reviewed like code. I make the design decisions and review every change.
+
 ## Contact
 
