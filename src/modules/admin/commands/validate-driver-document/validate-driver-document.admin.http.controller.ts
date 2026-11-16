@@ -13,6 +13,8 @@ import { Result } from 'oxide.ts';
 import { routesV1 } from '@config/app.routes';
 import { ApiErrorResponse } from '@libs/api/api-error.response';
 import { endOfParisDay } from '@libs/utils/paris-day';
+import { Roles } from '@modules/auth/roles.decorator';
+import { UserRoles } from '@modules/user/domain/user.types';
 import { ValidateDriverDocumentCommand } from '@modules/driver/commands/validate-driver-document/validate-driver-document.command';
 import { ValidateDriverDocumentError } from '@modules/driver/commands/validate-driver-document/validate-driver-document.service';
 import {
@@ -21,8 +23,6 @@ import {
 } from '@modules/driver/domain/driver.errors';
 import { ValidateDocumentRequestDto } from '../validate-document.request.dto';
 
-// TODO: restrict to ADMIN role once the admin role is implemented, like the
-// registration documents.
 @Controller(routesV1.version)
 export class ValidateDriverDocumentAdminHttpController {
   constructor(private readonly commandBus: CommandBus) {}
@@ -35,6 +35,7 @@ export class ValidateDriverDocumentAdminHttpController {
     description: 'DRIVER.DOCUMENT_EXPIRY_REQUIRED or DRIVER.DOCUMENT_EXPIRED',
     type: ApiErrorResponse,
   })
+  @Roles(UserRoles.admin)
   @Patch(routesV1.admin.validateDriverDocument)
   async validate(
     @Param('submissionId') submissionId: string,

@@ -12,6 +12,8 @@ import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { match, Result } from 'oxide.ts';
 import { routesV1 } from '@config/app.routes';
 import { ApiErrorResponse } from '@libs/api/api-error.response';
+import { Roles } from '@modules/auth/roles.decorator';
+import { UserRoles } from '@modules/user/domain/user.types';
 import { endOfParisDay } from '@libs/utils/paris-day';
 import {
   DocumentExpiredError,
@@ -24,7 +26,6 @@ import { ValidateRegistrationDocumentCommand } from '@modules/registration/comma
 import { ValidateRegistrationDocumentError } from '@modules/registration/commands/validate-registration-document/validate-registration-document.service';
 import { ValidateDocumentRequestDto } from '../validate-document.request.dto';
 
-// TODO: restrict to ADMIN role once the admin role is implemented (@Roles(UserRoles.admin))
 @Controller(routesV1.version)
 export class ValidateRegistrationDocumentAdminHttpController {
   constructor(private readonly commandBus: CommandBus) {}
@@ -38,6 +39,7 @@ export class ValidateRegistrationDocumentAdminHttpController {
       'REGISTRATION_DOCUMENT.EXPIRY_REQUIRED or REGISTRATION_DOCUMENT.EXPIRED',
     type: ApiErrorResponse,
   })
+  @Roles(UserRoles.admin)
   @Patch(routesV1.admin.validateRegistrationDocument)
   async validate(
     @Param('documentId') documentId: string,

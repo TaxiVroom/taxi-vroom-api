@@ -12,6 +12,8 @@ import { match, Result } from 'oxide.ts';
 import { NotFoundException } from '@libs/exceptions';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ApiErrorResponse } from '@src/libs/api/api-error.response';
+import { Roles } from '@modules/auth/roles.decorator';
+import { UserRoles } from '../../domain/user.types';
 
 @Controller(routesV1.version)
 export class DeleteUserHttpController {
@@ -27,6 +29,7 @@ export class DeleteUserHttpController {
     description: NotFoundException.message,
     type: ApiErrorResponse,
   })
+  @Roles(UserRoles.admin)
   @Delete(routesV1.user.delete)
   async deleteUser(@Param('id') id: string): Promise<void> {
     const command = new DeleteUserCommand({ userId: id });

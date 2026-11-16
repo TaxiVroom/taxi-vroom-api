@@ -15,7 +15,7 @@ product: Ride-hailing app for French licensed taxis, backend authority for match
 priceEstimate: shipped and tested on two emulators; ride starts ESTIMATED, ordering moves it to SEARCHING_DRIVER @ltm:priceEstimate
 ride: full ride works from estimate to completion, cancel, withdraw and no-show @ltm:rideLifecycle
 registration: passenger and driver onboarding work, validated documents copied to documents, spec docs/specs/inscription-chauffeur.md; admin can only validate, not reject @ltm:registration
-gaps: unprotected user routes, suspension, document rejection: see hyp
+gaps: suspension, document rejection: see hyp; admin-only routes since 2026-11-16, spec docs/specs/acces-admin.md
 rating: passenger rating and ride history shipped, spec docs/specs/notation-et-historique.md
 push: shipped on Android, iOS waits for hardware, spec docs/specs/notifications-push.md
 bookings: advance bookings shipped, spec docs/specs/reservations-a-l-avance.md

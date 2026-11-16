@@ -10,11 +10,14 @@ import { UserPaginatedResponseDto } from '../../dtos/user.paginated.response.dto
 import { PaginatedQueryRequestDto } from '@src/libs/api/paginated-query.request.dto';
 import { UserModel } from '../../database/user.repository';
 import { ResponseBase } from '@src/libs/api/response.base';
+import { Roles } from '@modules/auth/roles.decorator';
+import { UserRoles } from '../../domain/user.types';
 
 @Controller(routesV1.version)
 export class FindUsersHttpController {
   constructor(private readonly queryBus: QueryBus) {}
 
+  @Roles(UserRoles.admin)
   @Get(routesV1.user.root)
   @ApiOperation({ summary: 'Find users' })
   @ApiResponse({

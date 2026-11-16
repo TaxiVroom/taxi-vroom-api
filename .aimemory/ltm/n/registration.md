@@ -27,4 +27,4 @@ storage path: drivers/<uid>/<document-type-slug>/<side>.<ext>; the mobile always
 signed URLs last 15 minutes; get-registration-document-url injects repository ports, an exception to the CQRS read rule
 driver validation: each document validated by the admin route; when every DocumentType has a VALIDATED document, the registration completes
 document types come from prisma/seed.ts: permis, carte grise (front only), carte professionnelle, carte d'identité
-to validate a test driver: read registration_documents ids, then PATCH each with any Firebase token
+to validate a test driver: read registration_documents ids, then PATCH each with the Firebase token of the admin account (users.role ADMIN)

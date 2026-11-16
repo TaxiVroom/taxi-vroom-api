@@ -75,7 +75,7 @@ The app validates its environment at boot and refuses to start if a variable is 
 ## What I'd improve
 
 - Automated tests: the rules sit in domain entities, so they can be tested without a database. There are none yet.
-- An admin role, with the features that depend on it: rejecting a document and suspending a driver.
+- Admin features: rejecting a document and suspending a driver. The admin role exists and guards the admin routes, these two features are not built yet.
 - Push notifications on iOS, which is prepared but untested for lack of an Apple device.
 - A heartbeat for drivers whose phone loses the network for good.
 
