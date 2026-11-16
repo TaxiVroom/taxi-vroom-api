@@ -2,10 +2,10 @@
 
 Backend of **Taxi Vroom**, a ride-hailing app for French licensed taxis: legal price estimate, live matching with the nearest free driver, and a full ride from order to meter price.
 
-Mobile app (Flutter, passenger and driver in one app): [taxi-vroom-mobile](https://github.com/TaxiVroom/taxi-vroom-mobile)
-
 ## Demo
 https://github.com/user-attachments/assets/32111126-94c7-4686-b714-ef36e642e6c6
+
+Mobile app (Flutter, passenger and driver in one app): [taxi-vroom-mobile](https://github.com/TaxiVroom/taxi-vroom-mobile)
 
 ## Architecture
 
